@@ -22,12 +22,12 @@ function initScrollVideo() {
   video.pause();
   video.currentTime = 0;
 
-  // Map scroll over the full page height to the video timeline.
   let targetTime = 0;
   let currentTime = 0;
-  const SMOOTHING = 0.12; // lerp factor – higher = snappier
+  const SMOOTHING = 0.12;
 
   function computeTarget() {
+    // Full page: scroll 0 → (scrollHeight - innerHeight) maps to 0 → duration
     const maxScroll = Math.max(
       document.documentElement.scrollHeight - window.innerHeight,
       1
@@ -40,43 +40,43 @@ function initScrollVideo() {
   currentTime = targetTime;
 
   window.addEventListener('scroll', computeTarget, { passive: true });
-  window.addEventListener('resize', computeTarget);
+  window.addEventListener('resize', () => {
+    computeTarget();   // re-calc after layout reflow
+  });
+
+  let seeking = false;
 
   function tick() {
-    if (isFinite(targetTime)) {
-      // Smooth lerp toward target
+    if (isFinite(targetTime) && video.duration) {
       currentTime += (targetTime - currentTime) * SMOOTHING;
-
       if (Math.abs(targetTime - currentTime) < 0.001) {
         currentTime = targetTime;
       }
 
-      if (isFinite(currentTime) && video.duration) {
-        try {
-          video.currentTime = currentTime;
-        } catch (e) { /* seek-in-progress – ignore */ }
+      if (!seeking) {
+        seeking = true;
+        video.currentTime = currentTime;
       }
     }
     requestAnimationFrame(tick);
   }
 
+  video.addEventListener('seeked', () => { seeking = false; });
+
   requestAnimationFrame(tick);
 }
 
 /* ============================
-   3D TILT EFFECT (instant response)
+   3D TILT EFFECT (instant response, glitch-free)
    ============================ */
-const MAX_TILT = 15;  // degrees
+const MAX_TILT = 15;
 
 document.querySelectorAll('.tilt-card').forEach(card => {
   let rafId = null;
-  let targetX = 0;
-  let targetY = 0;
   let currentX = 0;
   let currentY = 0;
-  let resetting = false;
+  let isOver = false;
 
-  card.style.transition = 'none';
   card.style.willChange = 'transform';
 
   function applyTransform(rx, ry) {
@@ -85,46 +85,65 @@ document.querySelectorAll('.tilt-card').forEach(card => {
   }
 
   function resetTick() {
+    // If mouse re-entered before reset finished, stop immediately
+    if (isOver) {
+      rafId = null;
+      return;
+    }
+
     currentX += (0 - currentX) * 0.18;
     currentY += (0 - currentY) * 0.18;
 
     if (Math.abs(currentX) < 0.05 && Math.abs(currentY) < 0.05) {
+      currentX = 0;
+      currentY = 0;
       card.style.transform = '';
       rafId = null;
-      resetting = false;
       return;
     }
+
     applyTransform(currentX, currentY);
     rafId = requestAnimationFrame(resetTick);
   }
 
-  card.addEventListener('mousemove', (e) => {
-    const rect = card.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-
-    const dx = (e.clientX - cx) / (rect.width / 2);
-    const dy = (e.clientY - cy) / (rect.height / 2);
-
-    targetY = dx * MAX_TILT;
-    targetX = -dy * MAX_TILT;
-
-    // Direct, instant application – no lerp delay while hovering
-    currentX = targetX;
-    currentY = targetY;
-
-    if (rafId && resetting) {
+  card.addEventListener('mouseenter', () => {
+    isOver = true;
+    // Cancel any in-progress reset
+    if (rafId) {
       cancelAnimationFrame(rafId);
       rafId = null;
-      resetting = false;
     }
+  });
+
+  card.addEventListener('mousemove', (e) => {
+    const rect = card.getBoundingClientRect();
+
+    // Guard: ignore events fired just outside the element (browser quirk)
+    if (
+      e.clientX < rect.left || e.clientX > rect.right ||
+      e.clientY < rect.top  || e.clientY > rect.bottom
+    ) return;
+
+    const cx = rect.left + rect.width  / 2;
+    const cy = rect.top  + rect.height / 2;
+
+    const dx = (e.clientX - cx) / (rect.width  / 2);
+    const dy = (e.clientY - cy) / (rect.height / 2);
+
+    currentX = -dy * MAX_TILT;
+    currentY =  dx * MAX_TILT;
 
     applyTransform(currentX, currentY);
   });
 
-  card.addEventListener('mouseleave', () => {
+  card.addEventListener('mouseleave', (e) => {
+    // Verify pointer actually left the element (not just a child boundary)
+    const rel = e.relatedTarget;
+    if (rel && card.contains(rel)) return;
+
+    isOver = false;
+
     if (rafId) cancelAnimationFrame(rafId);
-    resetting = true;
     rafId = requestAnimationFrame(resetTick);
   });
 });
