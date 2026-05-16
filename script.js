@@ -8,78 +8,94 @@ window.addEventListener('scroll', () => {
 }, { passive: true });
 
 /* ============================
-   HERO VIDEO – scroll-driven playback
+   HERO VIDEO – smooth scroll-driven playback
    ============================ */
 const video = document.getElementById('hero-video');
 
-video.addEventListener('loadedmetadata', initScrollVideo);
-
 if (video.readyState >= 1) {
   initScrollVideo();
+} else {
+  video.addEventListener('loadedmetadata', initScrollVideo, { once: true });
 }
 
 function initScrollVideo() {
   video.pause();
   video.currentTime = 0;
 
-  let ticking = false;
+  // Map scroll over the full page height to the video timeline.
+  let targetTime = 0;
+  let currentTime = 0;
+  const SMOOTHING = 0.12; // lerp factor – higher = snappier
 
-  window.addEventListener('scroll', () => {
-    if (!ticking) {
-      requestAnimationFrame(updateVideo);
-      ticking = true;
-    }
-  }, { passive: true });
-
-  function updateVideo() {
-    const hero = document.getElementById('hero');
-    const heroHeight = hero.offsetHeight;
-    const scrolled = window.scrollY;
-
-    // Map scroll 0 → heroHeight to video 0 → duration
-    const progress = Math.min(scrolled / heroHeight, 1);
-    const targetTime = progress * video.duration;
-
-    if (isFinite(targetTime)) {
-      video.currentTime = targetTime;
-    }
-
-    ticking = false;
+  function computeTarget() {
+    const maxScroll = Math.max(
+      document.documentElement.scrollHeight - window.innerHeight,
+      1
+    );
+    const progress = Math.min(Math.max(window.scrollY / maxScroll, 0), 1);
+    targetTime = progress * (video.duration || 0);
   }
+
+  computeTarget();
+  currentTime = targetTime;
+
+  window.addEventListener('scroll', computeTarget, { passive: true });
+  window.addEventListener('resize', computeTarget);
+
+  function tick() {
+    if (isFinite(targetTime)) {
+      // Smooth lerp toward target
+      currentTime += (targetTime - currentTime) * SMOOTHING;
+
+      if (Math.abs(targetTime - currentTime) < 0.001) {
+        currentTime = targetTime;
+      }
+
+      if (isFinite(currentTime) && video.duration) {
+        try {
+          video.currentTime = currentTime;
+        } catch (e) { /* seek-in-progress – ignore */ }
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+
+  requestAnimationFrame(tick);
 }
 
 /* ============================
-   3D TILT EFFECT
+   3D TILT EFFECT (instant response)
    ============================ */
 const MAX_TILT = 15;  // degrees
 
 document.querySelectorAll('.tilt-card').forEach(card => {
   let rafId = null;
-  let currentX = 0;
-  let currentY = 0;
   let targetX = 0;
   let targetY = 0;
-  let isHovered = false;
+  let currentX = 0;
+  let currentY = 0;
+  let resetting = false;
 
-  function lerp(a, b, t) {
-    return a + (b - a) * t;
+  card.style.transition = 'none';
+  card.style.willChange = 'transform';
+
+  function applyTransform(rx, ry) {
+    card.style.transform =
+      `perspective(800px) rotateX(${rx}deg) rotateY(${ry}deg)`;
   }
 
-  function animate() {
-    currentX = lerp(currentX, targetX, 0.1);
-    currentY = lerp(currentY, targetY, 0.1);
+  function resetTick() {
+    currentX += (0 - currentX) * 0.18;
+    currentY += (0 - currentY) * 0.18;
 
-    card.style.transform = `perspective(800px) rotateX(${currentX}deg) rotateY(${currentY}deg)`;
-
-    const diffX = Math.abs(currentX - targetX);
-    const diffY = Math.abs(currentY - targetY);
-
-    if (isHovered || diffX > 0.01 || diffY > 0.01) {
-      rafId = requestAnimationFrame(animate);
-    } else {
+    if (Math.abs(currentX) < 0.05 && Math.abs(currentY) < 0.05) {
       card.style.transform = '';
       rafId = null;
+      resetting = false;
+      return;
     }
+    applyTransform(currentX, currentY);
+    rafId = requestAnimationFrame(resetTick);
   }
 
   card.addEventListener('mousemove', (e) => {
@@ -93,23 +109,23 @@ document.querySelectorAll('.tilt-card').forEach(card => {
     targetY = dx * MAX_TILT;
     targetX = -dy * MAX_TILT;
 
-    if (!rafId) {
-      rafId = requestAnimationFrame(animate);
-    }
-  });
+    // Direct, instant application – no lerp delay while hovering
+    currentX = targetX;
+    currentY = targetY;
 
-  card.addEventListener('mouseenter', () => {
-    isHovered = true;
+    if (rafId && resetting) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+      resetting = false;
+    }
+
+    applyTransform(currentX, currentY);
   });
 
   card.addEventListener('mouseleave', () => {
-    isHovered = false;
-    targetX = 0;
-    targetY = 0;
-
-    if (!rafId) {
-      rafId = requestAnimationFrame(animate);
-    }
+    if (rafId) cancelAnimationFrame(rafId);
+    resetting = true;
+    rafId = requestAnimationFrame(resetTick);
   });
 });
 
