@@ -29,7 +29,7 @@
       <img src="Neues Logo.png" alt="Visenta Logo" class="nav-logo" />
       <img src="Schriftzug.png" alt="Visenta" class="nav-wordmark" />
     </a>
-    <a href="#contact" class="btn btn-nav">Jetzt kostenlos beraten lassen</a>
+    <button type="button" class="btn btn-nav js-open-modal">Jetzt kostenlos beraten lassen</button>
   </nav>
 
   <!-- HERO SECTION -->
@@ -42,7 +42,7 @@
       <p class="hero-tagline">
         Wir bauen Websites, die verkaufen – mit Präzision, Stil und Wirkung.
       </p>
-      <a href="#contact" class="btn btn-hero">Jetzt kostenlos beraten lassen</a>
+      <button type="button" class="btn btn-hero js-open-modal">Jetzt kostenlos beraten lassen</button>
     </div>
     <div class="hero-scroll-hint">
       <span>Scroll</span>
@@ -58,57 +58,65 @@
         <h2 class="section-title">Ausgewählte Projekte</h2>
         <p class="section-sub">Jedes Projekt ist ein Unikat – maßgeschneidert für die Vision unserer Kunden.</p>
       </div>
-      <div class="cards-grid">
+      <div class="cards-grid projects-grid">
 
         <article class="glass-card project-card tilt-card">
-          <div class="card-tag">E-Commerce</div>
-          <div class="card-body">
-            <h3 class="card-title">Lumière Parfums</h3>
-            <p class="card-desc">Exklusiver Online-Shop für eine Luxus-Parfümerie. Fokus auf visuelles Storytelling, schnelle Ladezeiten und eine nahtlose Checkout-Experience.</p>
-          </div>
-          <div class="card-footer">
-            <span class="card-tag-small">UX Design</span>
-            <span class="card-tag-small">Shopify</span>
-            <span class="card-tag-small">Animation</span>
+          <div class="card-inner">
+            <div class="card-tag">E-Commerce</div>
+            <div class="card-body">
+              <h3 class="card-title">Lumière Parfums</h3>
+              <p class="card-desc">Exklusiver Online-Shop für eine Luxus-Parfümerie. Fokus auf visuelles Storytelling, schnelle Ladezeiten und eine nahtlose Checkout-Experience.</p>
+            </div>
+            <div class="card-footer">
+              <span class="card-tag-small">UX Design</span>
+              <span class="card-tag-small">Shopify</span>
+              <span class="card-tag-small">Animation</span>
+            </div>
           </div>
         </article>
 
         <article class="glass-card project-card tilt-card">
-          <div class="card-tag">SaaS</div>
-          <div class="card-body">
-            <h3 class="card-title">Norda Analytics</h3>
-            <p class="card-desc">Marketing-Website und Dashboard-Onboarding für ein B2B-SaaS-Startup. Klare Conversion-Architektur und datengetriebenes UI-Design.</p>
-          </div>
-          <div class="card-footer">
-            <span class="card-tag-small">Webflow</span>
-            <span class="card-tag-small">UI/UX</span>
-            <span class="card-tag-small">CRO</span>
-          </div>
-        </article>
-
-        <article class="glass-card project-card tilt-card">
-          <div class="card-tag">Corporate</div>
-          <div class="card-body">
-            <h3 class="card-title">Steinbach Immobilien</h3>
-            <p class="card-desc">Premium Corporate Website für ein Münchener Immobilienbüro. Hochwertige Bildsprache, interaktive Objekt-Karte und Lead-Generierungs-Funnel.</p>
-          </div>
-          <div class="card-footer">
-            <span class="card-tag-small">Custom Dev</span>
-            <span class="card-tag-small">SEO</span>
-            <span class="card-tag-small">Maps API</span>
+          <div class="card-inner">
+            <div class="card-tag">SaaS</div>
+            <div class="card-body">
+              <h3 class="card-title">Norda Analytics</h3>
+              <p class="card-desc">Marketing-Website und Dashboard-Onboarding für ein B2B-SaaS-Startup. Klare Conversion-Architektur und datengetriebenes UI-Design.</p>
+            </div>
+            <div class="card-footer">
+              <span class="card-tag-small">Webflow</span>
+              <span class="card-tag-small">UI/UX</span>
+              <span class="card-tag-small">CRO</span>
+            </div>
           </div>
         </article>
 
         <article class="glass-card project-card tilt-card">
-          <div class="card-tag">Branding & Web</div>
-          <div class="card-body">
-            <h3 class="card-title">Aelius Coffee</h3>
-            <p class="card-desc">Komplettes Markenrelaunch inkl. neuer Website für eine Berliner Specialty-Coffee-Rösterei. Vom Logo bis zur vollständigen digitalen Identität.</p>
+          <div class="card-inner">
+            <div class="card-tag">Corporate</div>
+            <div class="card-body">
+              <h3 class="card-title">Steinbach Immobilien</h3>
+              <p class="card-desc">Premium Corporate Website für ein Münchener Immobilienbüro. Hochwertige Bildsprache, interaktive Objekt-Karte und Lead-Generierungs-Funnel.</p>
+            </div>
+            <div class="card-footer">
+              <span class="card-tag-small">Custom Dev</span>
+              <span class="card-tag-small">SEO</span>
+              <span class="card-tag-small">Maps API</span>
+            </div>
           </div>
-          <div class="card-footer">
-            <span class="card-tag-small">Branding</span>
-            <span class="card-tag-small">Motion</span>
-            <span class="card-tag-small">WordPress</span>
+        </article>
+
+        <article class="glass-card project-card tilt-card">
+          <div class="card-inner">
+            <div class="card-tag">Branding &amp; Web</div>
+            <div class="card-body">
+              <h3 class="card-title">Aelius Coffee</h3>
+              <p class="card-desc">Komplettes Markenrelaunch inkl. neuer Website für eine Berliner Specialty-Coffee-Rösterei. Vom Logo bis zur vollständigen digitalen Identität.</p>
+            </div>
+            <div class="card-footer">
+              <span class="card-tag-small">Branding</span>
+              <span class="card-tag-small">Motion</span>
+              <span class="card-tag-small">WordPress</span>
+            </div>
           </div>
         </article>
 
@@ -135,30 +143,40 @@
             <li><strong>6</strong><span>Jahre Erfahrung</span></li>
           </ul>
         </div>
-        <div class="team-grid">
+      </div>
 
-          <article class="glass-card team-card tilt-card">
-            <div class="team-avatar">LM</div>
+      <div class="cards-grid team-grid">
+
+        <article class="glass-card team-card tilt-card">
+          <div class="card-inner team-inner">
+            <img class="team-avatar" alt="Lena Maurer Memoji"
+              src="https://api.dicebear.com/7.x/avataaars/svg?seed=Lena&radius=50&backgroundType=gradientLinear&backgroundColor=b6e3f4,c0aede" />
             <h3 class="team-name">Lena Maurer</h3>
             <p class="team-role">Creative Director</p>
-            <p class="team-bio">Spezialisiert auf Brand Identity und visuelle Konzeption. Lena sorgt dafür, dass jedes Projekt eine unverwechselbare Handschrift bekommt.</p>
-          </article>
+            <p class="team-bio">Brand Identity und visuelle Konzeption – Lena sorgt dafür, dass jedes Projekt eine unverwechselbare Handschrift bekommt.</p>
+          </div>
+        </article>
 
-          <article class="glass-card team-card tilt-card">
-            <div class="team-avatar">FK</div>
+        <article class="glass-card team-card tilt-card">
+          <div class="card-inner team-inner">
+            <img class="team-avatar" alt="Felix Kramer Memoji"
+              src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&radius=50&backgroundType=gradientLinear&backgroundColor=ffd5dc,ffdfbf" />
             <h3 class="team-name">Felix Kramer</h3>
             <p class="team-role">Lead Developer</p>
-            <p class="team-bio">Fullstack-Entwickler mit Leidenschaft für Performance und sauberen Code. Felix baut Websites, die so schnell sind wie sie aussehen.</p>
-          </article>
+            <p class="team-bio">Fullstack mit Leidenschaft für Performance – Felix baut Websites, die so schnell sind wie sie aussehen.</p>
+          </div>
+        </article>
 
-          <article class="glass-card team-card tilt-card">
-            <div class="team-avatar">SR</div>
+        <article class="glass-card team-card tilt-card">
+          <div class="card-inner team-inner">
+            <img class="team-avatar" alt="Sara Riedel Memoji"
+              src="https://api.dicebear.com/7.x/avataaars/svg?seed=Sara&radius=50&backgroundType=gradientLinear&backgroundColor=d1d4f9,c0aede" />
             <h3 class="team-name">Sara Riedel</h3>
             <p class="team-role">UX Strategin</p>
-            <p class="team-bio">Sara verbindet Nutzerforschung mit Conversion-Psychologie. Sie stellt sicher, dass jeder Klick Absicht hat – und Ergebnis bringt.</p>
-          </article>
+            <p class="team-bio">Verbindet Nutzerforschung mit Conversion-Psychologie – jeder Klick hat Absicht und Ergebnis.</p>
+          </div>
+        </article>
 
-        </div>
       </div>
     </div>
   </section>
@@ -169,18 +187,131 @@
       <p class="footer-cta-label">Starten wir gemeinsam</p>
       <h2 class="footer-cta-title">Bereit für dein<br />nächstes Projekt?</h2>
       <p class="footer-cta-sub">Erzähl uns von deiner Idee – die Erstberatung ist kostenlos und unverbindlich.</p>
-      <a href="mailto:hallo@visenta.de" class="btn btn-footer">Jetzt kostenlos beraten lassen</a>
+      <button type="button" class="btn btn-footer js-open-modal">Jetzt kostenlos beraten lassen</button>
     </div>
     <footer class="footer">
       <div class="container footer-inner">
         <div class="footer-brand">
-          <img src="Neues Logo.png" alt="Visenta Logo" class="footer-logo" />
-          <img src="Schriftzug.png" alt="Visenta" class="footer-wordmark" />
+          <img src="Schriftzug.png" alt="Visenta" class="nav-wordmark" />
         </div>
         <p class="footer-copy">&copy; 2026 Visenta. Alle Rechte vorbehalten.</p>
       </div>
     </footer>
   </section>
+
+  <!-- =================== MODAL =================== -->
+  <div class="modal" id="contact-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-backdrop js-close-modal"></div>
+
+    <div class="modal-dialog glass-card">
+      <button type="button" class="modal-close js-close-modal" aria-label="Schließen">&times;</button>
+
+      <!-- Progress -->
+      <div class="modal-progress" id="modal-progress">
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+        <p class="progress-label" id="progress-label">Schritt 1 von 2</p>
+      </div>
+
+      <!-- STEP 1 -->
+      <section class="modal-step active" data-step="1">
+        <header class="modal-header">
+          <h2 id="modal-title" class="modal-title">Lass uns kurz vorstellen.</h2>
+          <p class="modal-sub">Damit wir dich gut beraten können – ein paar Eckdaten zu deinem Unternehmen.</p>
+        </header>
+
+        <form id="step1-form" class="modal-form" novalidate>
+          <div class="form-row">
+            <label class="form-field">
+              <span>Firmenname</span>
+              <input type="text" name="company" required autocomplete="organization" />
+            </label>
+            <label class="form-field">
+              <span>Ansprechpartner</span>
+              <input type="text" name="contact" required autocomplete="name" />
+            </label>
+          </div>
+          <div class="form-row">
+            <label class="form-field">
+              <span>E-Mail</span>
+              <input type="email" name="email" required autocomplete="email" />
+            </label>
+            <label class="form-field">
+              <span>Telefon</span>
+              <input type="tel" name="phone" required autocomplete="tel" />
+            </label>
+          </div>
+          <label class="form-field">
+            <span>Website <em>(optional)</em></span>
+            <input type="url" name="website" placeholder="https://" autocomplete="url" />
+          </label>
+
+          <div class="modal-actions">
+            <button type="submit" class="btn btn-modal-primary">Weiter</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- STEP 2 -->
+      <section class="modal-step" data-step="2">
+        <header class="modal-header">
+          <h2 class="modal-title">Worum soll's gehen?</h2>
+          <p class="modal-sub">Erzähl uns kurz vom Projekt – und wähl dir einen passenden Termin.</p>
+        </header>
+
+        <form id="step2-form" class="modal-form" novalidate>
+          <fieldset class="form-field">
+            <legend>Projekt-Typ <em>(Mehrfachauswahl möglich)</em></legend>
+            <div class="checkbox-group">
+              <label class="checkbox-pill"><input type="checkbox" name="type" value="Neue Website" /><span>Neue Website</span></label>
+              <label class="checkbox-pill"><input type="checkbox" name="type" value="Relaunch" /><span>Relaunch</span></label>
+              <label class="checkbox-pill"><input type="checkbox" name="type" value="Online-Shop" /><span>Online-Shop</span></label>
+              <label class="checkbox-pill"><input type="checkbox" name="type" value="Branding" /><span>Branding</span></label>
+              <label class="checkbox-pill"><input type="checkbox" name="type" value="Sonstiges" /><span>Sonstiges</span></label>
+            </div>
+          </fieldset>
+
+          <label class="form-field">
+            <span>Kurze Projektbeschreibung</span>
+            <textarea name="description" rows="3" placeholder="Worum geht's? Ziele, Zielgruppe, Besonderheiten…"></textarea>
+          </label>
+
+          <fieldset class="form-field">
+            <legend>Termin wählen</legend>
+            <div class="slots-grid" id="slots-grid"></div>
+            <p class="form-hint">Das Gespräch dauert ca. 30–45 Minuten und findet per Video oder Telefon statt.</p>
+          </fieldset>
+
+          <label class="checkbox-line">
+            <input type="checkbox" name="privacy" required />
+            <span>Ich akzeptiere die <a href="#" tabindex="-1">Datenschutzerklärung</a> und stimme der Verarbeitung meiner Angaben zur Kontaktaufnahme zu.</span>
+          </label>
+
+          <div class="modal-actions split">
+            <button type="button" class="btn btn-modal-secondary js-back-step">Zurück</button>
+            <button type="submit" class="btn btn-modal-primary">Beratungstermin anfragen</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- SUCCESS -->
+      <section class="modal-step modal-success" data-step="success">
+        <div class="success-check" aria-hidden="true">
+          <svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24" /><path d="M14 27 l8 8 l16 -18" /></svg>
+        </div>
+        <h2 class="modal-title">Wir freuen uns auf das Gespräch.</h2>
+
+        <ul class="summary-list" id="success-summary"></ul>
+
+        <p class="modal-sub">Wir melden uns innerhalb von 24 Stunden mit einer Bestätigung.</p>
+
+        <div class="modal-actions split">
+          <button type="button" class="btn btn-modal-secondary" id="download-ics">Termin zum Kalender hinzufügen</button>
+          <button type="button" class="btn btn-modal-primary js-close-modal">Zurück zur Website</button>
+        </div>
+      </section>
+
+    </div>
+  </div>
 
   <script src="script.js"></script>
 </body>
