@@ -2,59 +2,195 @@
    NAVBAR – scroll state
    ============================ */
 const navbar = document.getElementById('navbar');
-
 window.addEventListener('scroll', () => {
   navbar.classList.toggle('scrolled', window.scrollY > 60);
 }, { passive: true });
 
 /* ============================
-   VIDEO – full-page scroll-driven playback
+   WEBGL BACKGROUND SHADER
    ============================ */
-const video = document.getElementById('hero-video');
+(function initWebGL() {
+  const canvas = document.getElementById('bg-canvas');
 
-if (video.readyState >= 1) initScrollVideo();
-else video.addEventListener('loadedmetadata', initScrollVideo, { once: true });
+  const VS = `
+    attribute vec2 a_pos;
+    void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }
+  `;
 
-function initScrollVideo() {
-  video.pause();
-  video.currentTime = 0;
+  /* Domain-warped fBm fluid
+     Two uniforms drive the motion:
+       u_t      – wall-clock seconds (very slow ambient drift)
+       u_scroll – 0..1 scroll progress (main scroll-driven movement) */
+  const FS = `
+    precision mediump float;
+    uniform float u_t;
+    uniform float u_scroll;
+    uniform vec2  u_res;
 
-  let targetTime = 0;
-  let currentTime = 0;
-  const SMOOTHING = 0.12;
+    float hash(vec2 p) {
+      p  = fract(p * vec2(127.1, 311.7));
+      p += dot(p, p + 45.32);
+      return fract(p.x * p.y);
+    }
 
-  function computeTarget() {
-    const maxScroll = Math.max(
-      document.body.scrollHeight - window.innerHeight,
-      1
-    );
-    const progress = Math.min(Math.max(window.scrollY / maxScroll, 0), 1);
-    targetTime = progress * (video.duration || 0);
+    float vnoise(vec2 p) {
+      vec2 i = floor(p);
+      vec2 f = fract(p);
+      vec2 u = f * f * (3.0 - 2.0 * f);
+      return mix(
+        mix(hash(i),              hash(i + vec2(1.0, 0.0)), u.x),
+        mix(hash(i + vec2(0.0,1.0)), hash(i + vec2(1.0,1.0)), u.x),
+        u.y
+      );
+    }
+
+    /* 4 octaves – good balance of detail vs. fill-rate */
+    float fbm(vec2 p) {
+      float v = 0.0, a = 0.5;
+      mat2  m = mat2(1.6, 1.2, -1.2, 1.6);
+      for (int i = 0; i < 4; i++) {
+        v += a * vnoise(p);
+        p  = m * p;
+        a *= 0.5;
+      }
+      return v;
+    }
+
+    void main() {
+      vec2 uv = (gl_FragCoord.xy - 0.5 * u_res) / u_res.y;
+
+      /* Scroll drives the main phase, real-time adds slow ambient drift */
+      float t = u_t * 0.04 + u_scroll * 7.0;
+
+      /* ── Pass 1: warp vector q ──────────────────────────────────────── */
+      vec2 q = vec2(
+        fbm(uv * 3.0 + vec2(0.00, 0.00) + t * 0.60),
+        fbm(uv * 3.0 + vec2(5.20, 1.30) + t * 0.60)
+      );
+
+      /* ── Pass 2: warp vector r ──────────────────────────────────────── */
+      vec2 r = vec2(
+        fbm(uv * 2.5 + 4.0 * q + vec2(1.70, 9.20) + t * 0.35),
+        fbm(uv * 2.5 + 4.0 * q + vec2(8.30, 2.80) + t * 0.45)
+      );
+
+      /* ── Final density field ────────────────────────────────────────── */
+      float f = fbm(uv * 2.0 + 4.0 * r + t * 0.10);
+
+      /* ── Color ramp: near-black → dark navy → purple → blue-white ──── */
+      vec3 col = mix(
+        vec3(0.008, 0.008, 0.015),
+        vec3(0.030, 0.040, 0.100),
+        smoothstep(0.0, 1.0, f * 2.5)
+      );
+      col = mix(col,
+        vec3(0.070, 0.050, 0.180),
+        smoothstep(0.0, 1.0, f * 1.8 - 0.10)
+      );
+      col = mix(col,
+        vec3(0.480, 0.580, 0.860),
+        smoothstep(0.58, 1.0, f * f * 2.9)
+      );
+      col = mix(col,
+        vec3(0.88, 0.93, 1.00),
+        smoothstep(0.68, 1.0, f * f * f * 4.2)
+      );
+
+      /* Contrast accent from warp magnitude */
+      col *= 1.0 - length(r) * 0.22;
+
+      /* Radial vignette – deep black at edges */
+      float vig = 1.0 - smoothstep(0.30, 1.15, length(uv));
+      col *= mix(0.04, 1.0, vig);
+
+      /* Global brightness cap so white text always reads */
+      col *= 0.72;
+
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `;
+
+  /* ── GL setup ─────────────────────────────────────────────────────── */
+  const gl = canvas.getContext('webgl')
+          || canvas.getContext('experimental-webgl');
+
+  if (!gl) {
+    // WebGL unavailable – show solid dark background
+    canvas.parentElement.style.background = '#06060a';
+    return;
   }
 
-  computeTarget();
-  currentTime = targetTime;
-
-  window.addEventListener('scroll', computeTarget, { passive: true });
-  window.addEventListener('resize', computeTarget);
-
-  let seeking = false;
-  video.addEventListener('seeked', () => { seeking = false; });
-
-  function tick() {
-    if (isFinite(targetTime) && video.duration) {
-      currentTime += (targetTime - currentTime) * SMOOTHING;
-      if (Math.abs(targetTime - currentTime) < 0.001) currentTime = targetTime;
-
-      if (!seeking) {
-        seeking = true;
-        video.currentTime = currentTime;
-      }
+  function compileShader(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+      console.error('Shader compile error:\n' + gl.getShaderInfoLog(s));
+      return null;
     }
+    return s;
+  }
+
+  const prog = gl.createProgram();
+  gl.attachShader(prog, compileShader(gl.VERTEX_SHADER,   VS));
+  gl.attachShader(prog, compileShader(gl.FRAGMENT_SHADER, FS));
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+    console.error('Program link error:\n' + gl.getProgramInfoLog(prog));
+    return;
+  }
+  gl.useProgram(prog);
+
+  /* Fullscreen quad as triangle strip: two triangles covering NDC */
+  const quadBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+  gl.bufferData(
+    gl.ARRAY_BUFFER,
+    new Float32Array([-1,-1,  1,-1,  -1,1,  1,1]),
+    gl.STATIC_DRAW
+  );
+
+  const aPos  = gl.getAttribLocation(prog,  'a_pos');
+  gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+  const uT      = gl.getUniformLocation(prog, 'u_t');
+  const uScroll = gl.getUniformLocation(prog, 'u_scroll');
+  const uRes    = gl.getUniformLocation(prog, 'u_res');
+
+  /* Cap DPR at 1.5 – background is blurry, full retina res not needed */
+  const DPR = Math.min(window.devicePixelRatio || 1, 1.5);
+
+  function resize() {
+    canvas.width  = Math.round(window.innerWidth  * DPR);
+    canvas.height = Math.round(window.innerHeight * DPR);
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.uniform2f(uRes, canvas.width, canvas.height);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  /* ── Scroll tracking with lerp ────────────────────────────────────── */
+  let scrollTarget = 0;
+  let scrollSmooth = 0;
+
+  window.addEventListener('scroll', () => {
+    const maxScroll = Math.max(
+      document.body.scrollHeight - window.innerHeight, 1
+    );
+    scrollTarget = window.scrollY / maxScroll;
+  }, { passive: true });
+
+  /* ── Render loop ──────────────────────────────────────────────────── */
+  function tick(ts) {
+    scrollSmooth += (scrollTarget - scrollSmooth) * 0.055;
+    gl.uniform1f(uT,      ts * 0.001);
+    gl.uniform1f(uScroll, scrollSmooth);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);
-}
+}());
 
 /* ============================
    3D TILT (glitch-free)
@@ -161,7 +297,6 @@ const formData = {
   slotISO: '', slotLabel: ''
 };
 
-// open / close
 document.querySelectorAll('.js-open-modal').forEach(btn => {
   btn.addEventListener('click', openModal);
 });
@@ -215,7 +350,6 @@ function showStep(step) {
   }
 }
 
-// step 1 submit
 step1Form.addEventListener('submit', (e) => {
   e.preventDefault();
   const fd = new FormData(step1Form);
@@ -242,15 +376,13 @@ step1Form.addEventListener('submit', (e) => {
   showStep(2);
 });
 
-// back button
 document.querySelector('.js-back-step').addEventListener('click', () => showStep(1));
 
-// step 2 submit
 step2Form.addEventListener('submit', (e) => {
   e.preventDefault();
   const fd = new FormData(step2Form);
 
-  formData.types = fd.getAll('type');
+  formData.types       = fd.getAll('type');
   formData.description = (fd.get('description') || '').toString().trim();
 
   if (!formData.slotISO) {
@@ -275,23 +407,20 @@ function renderSuccess() {
 }
 
 function escapeHTML(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
 }
 
 /* ============================
-   SLOTS – next 4 weekdays (Mon–Thu)
+   SLOTS – next 4 weekdays Mon–Thu
    ============================ */
 const DAY_NAMES = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
 const TIME_SLOTS = ['10:00', '13:00', '15:00'];
 
 function buildSlots() {
   slotsGrid.innerHTML = '';
-
-  const days = nextWeekdays(4);
-
-  days.forEach(date => {
+  nextWeekdays(4).forEach(date => {
     const dayCell = document.createElement('div');
     dayCell.className = 'slot-day';
     const dateStr = date.toLocaleDateString('de-DE', {
@@ -311,13 +440,13 @@ function buildSlots() {
       btn.type = 'button';
       btn.className = 'slot-btn';
       btn.textContent = t + ' Uhr';
-      btn.dataset.iso = dt.toISOString();
+      btn.dataset.iso   = dt.toISOString();
       btn.dataset.label = `${DAY_NAMES[date.getDay()]}, ${dateStr} um ${t} Uhr`;
 
       btn.addEventListener('click', () => {
         document.querySelectorAll('.slot-btn.selected').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
-        formData.slotISO = btn.dataset.iso;
+        formData.slotISO   = btn.dataset.iso;
         formData.slotLabel = btn.dataset.label;
       });
 
@@ -329,14 +458,13 @@ function buildSlots() {
   });
 }
 
-// Returns the next `count` weekdays that are Mon–Thu, starting tomorrow
 function nextWeekdays(count) {
   const out = [];
   const d = new Date();
   d.setHours(0, 0, 0, 0);
   d.setDate(d.getDate() + 1);
   while (out.length < count) {
-    const dow = d.getDay(); // 0 Sun .. 6 Sat
+    const dow = d.getDay();
     if (dow >= 1 && dow <= 4) out.push(new Date(d));
     d.setDate(d.getDate() + 1);
   }
@@ -344,41 +472,33 @@ function nextWeekdays(count) {
 }
 
 /* ============================
-   ICS Download
+   ICS DOWNLOAD
    ============================ */
 document.getElementById('download-ics').addEventListener('click', () => {
   if (!formData.slotISO) return;
   const start = new Date(formData.slotISO);
   const end   = new Date(start.getTime() + 45 * 60 * 1000);
+  const fmt = d => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 
-  const fmt = (d) =>
-    d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-
-  const uid = 'visenta-' + start.getTime() + '@visenta.de';
   const ics = [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
+    'BEGIN:VCALENDAR', 'VERSION:2.0',
     'PRODID:-//Visenta//Beratungstermin//DE',
-    'CALSCALE:GREGORIAN',
-    'METHOD:PUBLISH',
+    'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
     'BEGIN:VEVENT',
-    `UID:${uid}`,
+    `UID:visenta-${start.getTime()}@visenta.de`,
     `DTSTAMP:${fmt(new Date())}`,
     `DTSTART:${fmt(start)}`,
     `DTEND:${fmt(end)}`,
     'SUMMARY:Visenta – Kostenlose Erstberatung',
-    `DESCRIPTION:Erstberatung mit ${escapeICS(formData.contact)} (${escapeICS(formData.company)}). Findet per Video oder Telefon statt.`,
+    `DESCRIPTION:Erstberatung mit ${escapeICS(formData.contact)} (${escapeICS(formData.company)}). Per Video oder Telefon.`,
     'LOCATION:Online (Video / Telefon)',
     'STATUS:TENTATIVE',
-    'END:VEVENT',
-    'END:VCALENDAR'
+    'END:VEVENT', 'END:VCALENDAR'
   ].join('\r\n');
 
   const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
   const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url;
-  a.download = 'Visenta-Beratungstermin.ics';
+  const a    = Object.assign(document.createElement('a'), { href: url, download: 'Visenta-Beratungstermin.ics' });
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
