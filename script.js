@@ -75,55 +75,59 @@ window.addEventListener('scroll', () => {
       return v;
     }
 
-    /* ── Fluid wake ───────────────────────────────────────────────────────
-         Each trail entry spawns an expanding ring front + directional wake.
+    /* ── Fluid imprint ────────────────────────────────────────────────────
+         Each trail entry stamps a directional GROOVE into the height field
+         (NOT into the UV sampling — this is the key difference from a lens
+         distortion).  The groove is an anisotropic Gaussian whose long axis
+         aligns with the mouse-velocity vector at the moment the trail point
+         was recorded:
 
-         Physics model
-         ─────────────
-         • Ring radius grows as  r(age) = age × WAVE_SPEED
-         • Amplitude peaks when the ring front passes through a pixel:
-               ring = exp( -(dist - r(age))² × SHARPNESS )
-         • Push direction:
-               65% outward (radially away from trail point)  →  ripple
-               35% along velocity                            →  directional wake bias
-           Together these produce a V-shaped Kelvin-style wake behind the cursor.
-         • p -= fluidWake()  →  terrain domain shifted so features appear
-           displaced OUTWARD (subtracting moves sampling point inward,
-           making terrain visually expand outward from trail).              */
-    vec2 fluidWake(vec2 uv) {
-      vec2  wake       = vec2(0.0);
-      float WAVE_SPEED = 0.42;   /* UV/s  – ring expansion rate          */
-      float SHARPNESS  = 48.0;   /* ring edge sharpness                  */
-      float DECAY      = 2.3;    /* 1/e time constant for fade (seconds) */
-      float AMPLITUDE  = 0.095;  /* max domain displacement              */
-      float MAX_AGE    = 2.0;    /* discard trail points older than this  */
+             profile = exp( −(perp/Wp)² − (along/Wa)² )
+
+         where 'perp' and 'along' are the components of (uv − trailPos) in
+         the velocity-aligned local frame.  Wa > Wp → an elongated stroke,
+         like a finger drag through a film of mercury.
+
+         The imprint is SUBTRACTED from the surface height further down in
+         main(), which lowers the color-ramp value in the affected region
+         and produces a visibly darker streak along the mouse path.
+
+         Slow exponential decay (FADE_RATE = 0.55, MAX_AGE = 4.5s) makes
+         the streak linger for ~3 seconds before fully disappearing.       */
+    float fluidImprint(vec2 uv) {
+      float depth      = 0.0;
+      float FADE_RATE  = 0.55;   /* 1/e per ~1.8 s                          */
+      float MAX_AGE    = 4.5;    /* fully ignored beyond this               */
+      float W_PERP     = 0.028;  /* groove half-width across path           */
+      float W_ALONG    = 0.085;  /* groove half-length along path           */
+      float PER_POINT  = 0.095;  /* amplitude contribution per trail entry  */
 
       for (int i = 0; i < 8; i++) {
         float age   = u_t - u_tt[i];
         if (age < 0.0 || age > MAX_AGE) continue;
 
         float speed = length(u_tv[i]);
-        if (speed < 0.008) continue;          /* ignore nearly-still points */
+        if (speed < 0.008) continue;
+
+        vec2  velN  = u_tv[i] / speed;
+        vec2  perpN = vec2(-velN.y, velN.x);
 
         vec2  toPixel = uv - u_tp[i];
-        float dist    = length(toPixel);
-        vec2  radN    = dist > 0.001 ? toPixel / dist : vec2(0.0, 1.0);
-        vec2  velN    = u_tv[i] / speed;
+        float along   = dot(toPixel, velN);
+        float perp    = dot(toPixel, perpN);
 
-        /* Expanding ring: amplitude peaks at the current wave front */
-        float front   = age * WAVE_SPEED;
-        float ring    = exp(-pow(dist - front, 2.0) * SHARPNESS);
+        /* Anisotropic Gaussian: narrow across velocity, long along it      */
+        float profile = exp(
+            -(perp  * perp ) / (W_PERP  * W_PERP)
+            -(along * along) / (W_ALONG * W_ALONG)
+        );
 
-        /* Temporal + speed fade */
-        float fade    = exp(-age * DECAY) * clamp(speed / 0.15, 0.0, 1.0);
+        /* Temporal fade × speed-magnitude modulation                      */
+        float fade = exp(-age * FADE_RATE) * clamp(speed / 0.10, 0.0, 1.0);
 
-        /* Push direction: outward radial + forward velocity bias          */
-        /* normalize() prevents magnitude from dominating when mixing      */
-        vec2  pushDir = normalize(mix(radN, velN, 0.35));
-
-        wake += pushDir * ring * fade * AMPLITUDE;
+        depth += profile * fade * PER_POINT;
       }
-      return wake;
+      return depth;
     }
 
     void main() {
@@ -133,14 +137,12 @@ window.addEventListener('scroll', () => {
 
       float t  = u_t * 0.045 + u_scroll * 6.0;
 
-      /* Terrain UV: scroll = vertical camera pan */
+      /* Terrain UV: scroll = vertical camera pan only — mouse no longer
+         warps the sampling coordinates (that was what created the lens feel) */
       vec2 p   = uv;
       p.y     += u_scroll * 2.2;
 
-      /* Apply fluid wake: subtract → terrain visually pushed OUTWARD */
-      p       -= fluidWake(uv);
-
-      /* Two-pass domain warp */
+      /* Two-pass domain warp (unaffected by mouse) */
       vec2 q = vec2(
         fbm(p * 1.8 + vec2(0.00, 0.00) + t * 0.38),
         fbm(p * 1.8 + vec2(5.20, 1.30) + t * 0.38)
@@ -153,6 +155,12 @@ window.addEventListener('scroll', () => {
       float hills  = fbm(p * 1.2 + 2.5*r + t * 0.10);
       float ridges = rfbm(p * 2.2 + r * 1.8 + t * 0.07);
       float h      = hills * 0.68 + ridges * 0.32;
+
+      /* Fluid imprint: subtract groove depth from height field. This
+         depresses the surface where the mouse has dragged through it,
+         making the trail appear as a darker streak along the path —
+         a real deformation of the metal, not an optical distortion.    */
+      h = clamp(h - fluidImprint(uv), 0.0, 1.0);
 
       /* ── Metallic shading ────────────────────────────────────────────────
            Metal needs high-contrast diffuse + a sharp specular highlight.
@@ -175,20 +183,27 @@ window.addEventListener('scroll', () => {
       float shade = 0.30 + 0.70 * clamp(diffuse * 0.5 + 0.5, 0.0, 1.0);
 
       /* ── Liquid aluminium color ramp ────────────────────────────────────
-           deep shadow → graphite → cool mid-grey → brushed silver → specular  */
-      vec3 col = vec3(0.018, 0.020, 0.026);                        /* shadow   */
-      col = mix(col, vec3(0.055, 0.060, 0.072), smoothstep(0.06, 0.28, h));
-      col = mix(col, vec3(0.165, 0.175, 0.205), smoothstep(0.20, 0.46, h));
-      col = mix(col, vec3(0.390, 0.410, 0.460), smoothstep(0.36, 0.62, h));
-      col = mix(col, vec3(0.680, 0.700, 0.760), smoothstep(0.52, 0.76, h));
-      col = mix(col, vec3(0.910, 0.930, 0.975), smoothstep(0.68, 0.88, h));
+           STRICTLY neutral cool silver: R == G in every stop, only B is
+           allowed to drift slightly higher for a faint cold-steel cast.
+           No green, no warm tint, no saturation.
 
-      /* Hard specular: bright near-white flash on ridges facing the light   */
-      col = mix(col, vec3(0.975, 0.985, 1.000),
+           #101012 → #1E1E22 → #303035 → #58585E → #808088 → #A0A0A8
+                   → #C8C8CE → #E8E8E8 → #FFFFFF                            */
+      vec3 col = vec3(0.063, 0.063, 0.071);                        /* #101012  */
+      col = mix(col, vec3(0.118, 0.118, 0.133), smoothstep(0.06, 0.28, h));
+      col = mix(col, vec3(0.188, 0.188, 0.208), smoothstep(0.20, 0.46, h));
+      col = mix(col, vec3(0.345, 0.345, 0.369), smoothstep(0.34, 0.58, h));
+      col = mix(col, vec3(0.502, 0.502, 0.533), smoothstep(0.50, 0.72, h));
+      col = mix(col, vec3(0.627, 0.627, 0.659), smoothstep(0.66, 0.82, h));
+      col = mix(col, vec3(0.784, 0.784, 0.808), smoothstep(0.76, 0.90, h));
+      col = mix(col, vec3(0.910, 0.910, 0.910), smoothstep(0.84, 0.95, h));
+
+      /* Hard specular: pure white flash on ridges facing the key light       */
+      col = mix(col, vec3(1.000, 1.000, 1.000),
                 smoothstep(0.55, 1.0, ridges) * specular * 0.90);
 
-      /* Rim: subtle brightening on curved-away surfaces                     */
-      col += vec3(0.04, 0.045, 0.055) * rim * rim * 0.35;
+      /* Rim: faint cool brightening on grazing-angle surfaces (R == G)       */
+      col += vec3(0.045, 0.045, 0.055) * rim * rim * 0.35;
 
       /* Apply diffuse shading */
       col *= shade;
@@ -278,9 +293,13 @@ window.addEventListener('scroll', () => {
        New entries are added at most every INTERVAL seconds and only
        when the mouse is moving fast enough to produce a visible wake.   */
   const TRAIL_N    = 8;
-  const TRAIL_INT  = 0.035;          /* min seconds between trail points */
-  const MIN_SPEED  = 0.008;          /* UV/s threshold – ignore tiny jitter */
-  const MAX_VEL    = 4.0;            /* UV/s cap to prevent explosion on teleport */
+  const TRAIL_INT  = 0.13;           /* sec between recorded points
+                                        – wider spacing means the buffer
+                                          covers a longer mouse path
+                                          (≈1.0s of live history, then
+                                          decays for up to 4.5s after)   */
+  const MIN_SPEED  = 0.008;          /* UV/s – ignore sub-jitter movement */
+  const MAX_VEL    = 4.0;            /* UV/s cap to avoid teleport spikes */
 
   const trailPos  = new Float32Array(TRAIL_N * 2);  /* [x0,y0, x1,y1, ...] */
   const trailVel  = new Float32Array(TRAIL_N * 2);
