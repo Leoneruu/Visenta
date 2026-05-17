@@ -7,32 +7,38 @@ window.addEventListener('scroll', () => {
 }, { passive: true });
 
 /* ============================
-   WEBGL BACKGROUND – GREEN HILLS SHADER
+   WEBGL BACKGROUND – GREEN HILLS + FLUID MOUSE
    ============================ */
 (function initWebGL() {
   const canvas = document.getElementById('bg-canvas');
 
-  /* ── Vertex shader: fullscreen triangle strip ─────────────────────── */
+  /* ── Vertex shader ────────────────────────────────────────────────── */
   const VS = `
     attribute vec2 a_pos;
     void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }
   `;
 
   /* ── Fragment shader ──────────────────────────────────────────────────
-       Three uniforms drive the scene:
-         u_t      – wall-clock seconds  → slow ambient drift
-         u_scroll – 0..1 page progress  → fly-over movement + phase advance
-         u_mouse  – 0..1 cursor x/y     → subtle terrain pull toward cursor
+     Uniforms:
+       u_t      – wall-clock seconds        → slow ambient terrain drift
+       u_scroll – 0..1 page progress        → fly-over + phase advance
+       u_tp[8]  – trail positions (UV)      ┐
+       u_tv[8]  – trail velocities (UV/s)   ├ fluid wake system
+       u_tt[8]  – trail timestamps (s)      ┘
      ──────────────────────────────────────────────────────────────────── */
   const FS = `
     precision mediump float;
 
     uniform float u_t;
     uniform float u_scroll;
-    uniform vec2  u_mouse;
     uniform vec2  u_res;
 
-    /* ── Noise primitives ─────────────────────────────────────────────── */
+    /* Mouse trail – N=8 ring-buffer entries */
+    uniform vec2  u_tp[8];
+    uniform vec2  u_tv[8];
+    uniform float u_tt[8];
+
+    /* ── Value noise (quintic interpolation) ──────────────────────────── */
     float hash(vec2 p) {
       p  = fract(p * vec2(127.1, 311.7));
       p += dot(p, p + 45.32);
@@ -42,116 +48,136 @@ window.addEventListener('scroll', () => {
     float vnoise(vec2 p) {
       vec2 i = floor(p);
       vec2 f = fract(p);
-      /* quintic interpolation for smoother look than cubic */
       vec2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
       return mix(
-        mix(hash(i),               hash(i + vec2(1.0, 0.0)), u.x),
+        mix(hash(i),               hash(i + vec2(1.0,0.0)), u.x),
         mix(hash(i + vec2(0.0,1.0)), hash(i + vec2(1.0,1.0)), u.x),
         u.y
       );
     }
 
-    /* Standard fBm – 5 octaves for smooth rolling hills */
+    /* 5-octave smooth fBm – rolling hills base */
     float fbm(vec2 p) {
       float v = 0.0, a = 0.5;
-      mat2  m = mat2(1.6, 1.2, -1.2, 1.6); /* rotation to avoid axis alignment */
-      for (int i = 0; i < 5; i++) {
-        v += a * vnoise(p);
-        p  = m * p;
-        a *= 0.5;
-      }
+      mat2  m = mat2(1.6, 1.2, -1.2, 1.6);
+      for (int i = 0; i < 5; i++) { v += a * vnoise(p); p = m*p; a *= 0.5; }
       return v;
     }
 
-    /* Ridged fBm – inverts valleys into sharp crests, giving hill-ridge look */
+    /* 4-octave ridged fBm – sharp hilltop crests */
     float rfbm(vec2 p) {
       float v = 0.0, a = 0.5;
       mat2  m = mat2(1.8, 0.9, -0.9, 1.8);
       for (int i = 0; i < 4; i++) {
-        float n = vnoise(p);
-        v += a * (1.0 - abs(n * 2.0 - 1.0)); /* tent → ridge at n=0.5 */
-        p  = m * p;
-        a *= 0.45;
+        v += a * (1.0 - abs(vnoise(p) * 2.0 - 1.0));
+        p = m*p; a *= 0.45;
       }
       return v;
     }
 
+    /* ── Fluid wake ───────────────────────────────────────────────────────
+         Each trail entry spawns an expanding ring front + directional wake.
+
+         Physics model
+         ─────────────
+         • Ring radius grows as  r(age) = age × WAVE_SPEED
+         • Amplitude peaks when the ring front passes through a pixel:
+               ring = exp( -(dist - r(age))² × SHARPNESS )
+         • Push direction:
+               65% outward (radially away from trail point)  →  ripple
+               35% along velocity                            →  directional wake bias
+           Together these produce a V-shaped Kelvin-style wake behind the cursor.
+         • p -= fluidWake()  →  terrain domain shifted so features appear
+           displaced OUTWARD (subtracting moves sampling point inward,
+           making terrain visually expand outward from trail).              */
+    vec2 fluidWake(vec2 uv) {
+      vec2  wake       = vec2(0.0);
+      float WAVE_SPEED = 0.42;   /* UV/s  – ring expansion rate          */
+      float SHARPNESS  = 48.0;   /* ring edge sharpness                  */
+      float DECAY      = 2.3;    /* 1/e time constant for fade (seconds) */
+      float AMPLITUDE  = 0.095;  /* max domain displacement              */
+      float MAX_AGE    = 2.0;    /* discard trail points older than this  */
+
+      for (int i = 0; i < 8; i++) {
+        float age   = u_t - u_tt[i];
+        if (age < 0.0 || age > MAX_AGE) continue;
+
+        float speed = length(u_tv[i]);
+        if (speed < 0.008) continue;          /* ignore nearly-still points */
+
+        vec2  toPixel = uv - u_tp[i];
+        float dist    = length(toPixel);
+        vec2  radN    = dist > 0.001 ? toPixel / dist : vec2(0.0, 1.0);
+        vec2  velN    = u_tv[i] / speed;
+
+        /* Expanding ring: amplitude peaks at the current wave front */
+        float front   = age * WAVE_SPEED;
+        float ring    = exp(-pow(dist - front, 2.0) * SHARPNESS);
+
+        /* Temporal + speed fade */
+        float fade    = exp(-age * DECAY) * clamp(speed / 0.15, 0.0, 1.0);
+
+        /* Push direction: outward radial + forward velocity bias          */
+        /* normalize() prevents magnitude from dominating when mixing      */
+        vec2  pushDir = normalize(mix(radN, velN, 0.35));
+
+        wake += pushDir * ring * fade * AMPLITUDE;
+      }
+      return wake;
+    }
+
     void main() {
-      /* Aspect-correct UV, Y-up */
-      vec2 uv = gl_FragCoord.xy / u_res;
-      uv.x   *= u_res.x / u_res.y;
+      /* Aspect-corrected UV (Y-up, matches trail coordinate system) */
+      vec2 uv  = gl_FragCoord.xy / u_res;
+      uv.x    *= u_res.x / u_res.y;
 
-      /* ── Mouse influence ──────────────────────────────────────────────
-           Convert 0..1 → -0.5..+0.5. Apply a soft radial falloff so
-           the pull is strongest near the cursor and fades at the edges. */
-      vec2  mUV   = vec2(u_mouse.x * u_res.x / u_res.y, u_mouse.y);
-      vec2  mDelta = mUV - uv;
-      float mDist  = length(mDelta);
-      /* Gaussian-ish pull: terrain domain is nudged 0..±0.12 toward cursor */
-      vec2  mouseWarp = mDelta * 0.12 * exp(-mDist * mDist * 4.0);
+      float t  = u_t * 0.045 + u_scroll * 6.0;
 
-      /* ── Time: real-time ambient + scroll-driven phase ─────────────── */
-      float t = u_t * 0.045 + u_scroll * 6.0;
+      /* Terrain UV: scroll = vertical camera pan */
+      vec2 p   = uv;
+      p.y     += u_scroll * 2.2;
 
-      /* ── Terrain UV: scroll shifts Y (fly-over), mouse warps locally ─ */
-      vec2 p = uv;
-      p.y   += u_scroll * 2.2;   /* vertical camera pan */
-      p     -= mouseWarp;        /* pull terrain toward cursor */
+      /* Apply fluid wake: subtract → terrain visually pushed OUTWARD */
+      p       -= fluidWake(uv);
 
-      /* ── Domain warp: two-pass, gives organic non-repetitive shapes ── */
+      /* Two-pass domain warp */
       vec2 q = vec2(
         fbm(p * 1.8 + vec2(0.00, 0.00) + t * 0.38),
         fbm(p * 1.8 + vec2(5.20, 1.30) + t * 0.38)
       );
       vec2 r = vec2(
-        fbm(p * 1.4 + 2.8 * q + vec2(1.70, 9.20) + t * 0.22),
-        fbm(p * 1.4 + 2.8 * q + vec2(8.30, 2.80) + t * 0.28)
+        fbm(p * 1.4 + 2.8*q + vec2(1.70, 9.20) + t * 0.22),
+        fbm(p * 1.4 + 2.8*q + vec2(8.30, 2.80) + t * 0.28)
       );
 
-      /* ── Height field: blend smooth hills + sharp ridges ───────────── */
-      float hills  = fbm(p * 1.2 + 2.5 * r + t * 0.10);
+      float hills  = fbm(p * 1.2 + 2.5*r + t * 0.10);
       float ridges = rfbm(p * 2.2 + r * 1.8 + t * 0.07);
       float h      = hills * 0.68 + ridges * 0.32;
 
-      /* ── Fake directional lighting from top-right ─────────────────────
-           Use q as a rough surface-gradient estimate; dot against a sun
-           vector gives cheap Lambertian-style shading with no extra samples. */
-      vec2  qN    = q - vec2(0.5);      /* center q around zero */
+      /* Cheap directional shading from q gradient × sun vector */
+      vec2  qN    = q - 0.5;
       float sun   = dot(normalize(qN + vec2(0.001)), vec2(0.6, 0.8));
       float shade = 0.72 + 0.28 * clamp(sun, 0.0, 1.0);
 
-      /* ── Green terrain color ramp ─────────────────────────────────────
-           near-black at valley → dark forest → hillside → vivid peak     */
-      vec3 cValley = vec3(0.003, 0.014, 0.005);
-      vec3 cFloor  = vec3(0.008, 0.042, 0.013);
-      vec3 cForest = vec3(0.022, 0.105, 0.030);
-      vec3 cHill   = vec3(0.055, 0.235, 0.065);
-      vec3 cPeak   = vec3(0.105, 0.400, 0.095);
-      vec3 cCrest  = vec3(0.185, 0.600, 0.145);
-
-      vec3 col = cValley;
-      col = mix(col, cFloor,  smoothstep(0.06, 0.26, h));
-      col = mix(col, cForest, smoothstep(0.20, 0.44, h));
-      col = mix(col, cHill,   smoothstep(0.36, 0.60, h));
-      col = mix(col, cPeak,   smoothstep(0.52, 0.76, h));
-      col = mix(col, cCrest,  smoothstep(0.68, 0.90, h) * ridges);
-
-      /* Apply directional shading */
+      /* Green terrain ramp: deep valley → dark forest → peak → sunlit crest */
+      vec3 col = vec3(0.003, 0.014, 0.005);
+      col = mix(col, vec3(0.008, 0.042, 0.013), smoothstep(0.06, 0.26, h));
+      col = mix(col, vec3(0.022, 0.105, 0.030), smoothstep(0.20, 0.44, h));
+      col = mix(col, vec3(0.055, 0.235, 0.065), smoothstep(0.36, 0.60, h));
+      col = mix(col, vec3(0.105, 0.400, 0.095), smoothstep(0.52, 0.76, h));
+      col = mix(col, vec3(0.185, 0.600, 0.145), smoothstep(0.68, 0.90, h) * ridges);
       col *= shade;
 
-      /* Micro-contour lines: very subtle striations across the terrain */
-      float contour = fract(h * 10.0);
-      float line    = 1.0 - smoothstep(0.0, 0.04, abs(contour - 0.5) - 0.47);
-      col *= 1.0 - line * 0.10;
+      /* Micro-contour lines */
+      float ct = fract(h * 10.0);
+      col *= 1.0 - (1.0 - smoothstep(0.0, 0.04, abs(ct - 0.5) - 0.47)) * 0.10;
 
-      /* ── Vignette: radial darkening toward edges ────────────────────── */
+      /* Radial vignette */
       vec2  vUV = gl_FragCoord.xy / u_res - 0.5;
       float vig = 1.0 - smoothstep(0.28, 1.10, length(vUV));
       col *= mix(0.03, 1.0, vig);
 
-      /* ── Global brightness cap: keeps white text readable ───────────── */
       col *= 0.80;
-
       gl_FragColor = vec4(col, 1.0);
     }
   `;
@@ -160,17 +186,14 @@ window.addEventListener('scroll', () => {
   const gl = canvas.getContext('webgl')
           || canvas.getContext('experimental-webgl');
 
-  if (!gl) {
-    canvas.parentElement.style.background = '#020a03';
-    return;
-  }
+  if (!gl) { canvas.parentElement.style.background = '#020a03'; return; }
 
   function compileShader(type, src) {
     const s = gl.createShader(type);
     gl.shaderSource(s, src);
     gl.compileShader(s);
     if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
-      console.error('Shader compile error:\n' + gl.getShaderInfoLog(s));
+      console.error('Shader:', gl.getShaderInfoLog(s));
       return null;
     }
     return s;
@@ -181,28 +204,26 @@ window.addEventListener('scroll', () => {
   gl.attachShader(prog, compileShader(gl.FRAGMENT_SHADER, FS));
   gl.linkProgram(prog);
   if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-    console.error('Program link error:\n' + gl.getProgramInfoLog(prog));
-    return;
+    console.error('Link:', gl.getProgramInfoLog(prog)); return;
   }
   gl.useProgram(prog);
 
-  /* Fullscreen quad – two triangles as a strip */
+  /* Fullscreen quad */
   const quadBuf = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
   gl.bufferData(gl.ARRAY_BUFFER,
-    new Float32Array([-1,-1,  1,-1,  -1,1,  1,1]),
-    gl.STATIC_DRAW
-  );
+    new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
   const aPos = gl.getAttribLocation(prog, 'a_pos');
   gl.enableVertexAttribArray(aPos);
   gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
 
-  const uT      = gl.getUniformLocation(prog, 'u_t');
-  const uScroll = gl.getUniformLocation(prog, 'u_scroll');
-  const uMouse  = gl.getUniformLocation(prog, 'u_mouse');
-  const uRes    = gl.getUniformLocation(prog, 'u_res');
+  const uT         = gl.getUniformLocation(prog, 'u_t');
+  const uScroll    = gl.getUniformLocation(prog, 'u_scroll');
+  const uRes       = gl.getUniformLocation(prog, 'u_res');
+  const uTrailPos  = gl.getUniformLocation(prog, 'u_tp[0]');
+  const uTrailVel  = gl.getUniformLocation(prog, 'u_tv[0]');
+  const uTrailTime = gl.getUniformLocation(prog, 'u_tt[0]');
 
-  /* Background is organic/blurry – cap DPR to save fill-rate */
   const DPR = Math.min(window.devicePixelRatio || 1, 1.5);
 
   function resize() {
@@ -219,39 +240,90 @@ window.addEventListener('scroll', () => {
   let scrollSmooth = 0;
 
   window.addEventListener('scroll', () => {
-    const maxScroll = Math.max(
-      document.body.scrollHeight - window.innerHeight, 1
-    );
-    scrollTarget = window.scrollY / maxScroll;
+    scrollTarget = window.scrollY /
+      Math.max(document.body.scrollHeight - window.innerHeight, 1);
   }, { passive: true });
 
-  /* ── Mouse tracking (lerped for smoothness) ───────────────────────── */
-  /* Start centered so there's no jump before first mousemove */
-  let mouseTarget = { x: 0.5, y: 0.5 };
-  let mouseSmooth = { x: 0.5, y: 0.5 };
+  /* ── Trail system ─────────────────────────────────────────────────────
+       Ring buffer of N=8 entries. Each entry stores:
+         position  – in terrain UV space (aspect-corrected, Y-up)
+         velocity  – UV/s
+         timestamp – wall-clock seconds
+
+       New entries are added at most every INTERVAL seconds and only
+       when the mouse is moving fast enough to produce a visible wake.   */
+  const TRAIL_N    = 8;
+  const TRAIL_INT  = 0.035;          /* min seconds between trail points */
+  const MIN_SPEED  = 0.008;          /* UV/s threshold – ignore tiny jitter */
+  const MAX_VEL    = 4.0;            /* UV/s cap to prevent explosion on teleport */
+
+  const trailPos  = new Float32Array(TRAIL_N * 2);  /* [x0,y0, x1,y1, ...] */
+  const trailVel  = new Float32Array(TRAIL_N * 2);
+  const trailTime = new Float32Array(TRAIL_N).fill(-999); /* far past = inactive */
+
+  let trailHead   = 0;
+  let lastTrailT  = -999;
+
+  /* Previous raw mouse position (terrain UV space) for velocity calc */
+  let prevUVX = -1;
+  let prevUVY = -1;
+  let prevMoveT = 0;
+
+  function aspect() { return window.innerWidth / window.innerHeight; }
+
+  function onMouseMove(cx, cy) {
+    const now = performance.now() * 0.001;
+    const dt  = now - prevMoveT;
+    if (dt < 0.004) return;               /* debounce sub-4ms bursts */
+
+    const asp  = aspect();
+    const uvx  = (cx / window.innerWidth)  * asp;
+    const uvy  = 1.0 - cy / window.innerHeight; /* flip Y for GL */
+
+    if (prevUVX >= 0) {
+      const vx  = (uvx - prevUVX) / dt;
+      const vy  = (uvy - prevUVY) / dt;
+      const spd = Math.sqrt(vx*vx + vy*vy);
+
+      if (spd >= MIN_SPEED && now - lastTrailT >= TRAIL_INT) {
+        lastTrailT = now;
+
+        /* Clamp velocity to prevent visual explosions on fast snaps */
+        const s = spd > MAX_VEL ? MAX_VEL / spd : 1.0;
+
+        trailPos[trailHead * 2]     = uvx;
+        trailPos[trailHead * 2 + 1] = uvy;
+        trailVel[trailHead * 2]     = vx * s;
+        trailVel[trailHead * 2 + 1] = vy * s;
+        trailTime[trailHead]        = now;
+
+        trailHead = (trailHead + 1) % TRAIL_N;
+      }
+    }
+
+    prevUVX  = uvx;
+    prevUVY  = uvy;
+    prevMoveT = now;
+  }
 
   window.addEventListener('mousemove', (e) => {
-    mouseTarget.x =        e.clientX / window.innerWidth;
-    mouseTarget.y = 1.0 - (e.clientY / window.innerHeight); /* flip Y for GL */
+    onMouseMove(e.clientX, e.clientY);
   }, { passive: true });
 
-  /* Touch support: treat first touch as mouse */
   window.addEventListener('touchmove', (e) => {
-    const t = e.touches[0];
-    mouseTarget.x =        t.clientX / window.innerWidth;
-    mouseTarget.y = 1.0 - (t.clientY / window.innerHeight);
+    onMouseMove(e.touches[0].clientX, e.touches[0].clientY);
   }, { passive: true });
 
   /* ── Render loop ──────────────────────────────────────────────────── */
   function tick(ts) {
-    const k = 0.055; /* lerp factor – smaller = smoother/lazier */
-    scrollSmooth  += (scrollTarget  - scrollSmooth)  * k;
-    mouseSmooth.x += (mouseTarget.x - mouseSmooth.x) * k * 0.7;
-    mouseSmooth.y += (mouseTarget.y - mouseSmooth.y) * k * 0.7;
+    const now = ts * 0.001;
+    scrollSmooth += (scrollTarget - scrollSmooth) * 0.055;
 
-    gl.uniform1f(uT,      ts * 0.001);
+    gl.uniform1f(uT,      now);
     gl.uniform1f(uScroll, scrollSmooth);
-    gl.uniform2f(uMouse,  mouseSmooth.x, mouseSmooth.y);
+    gl.uniform2fv(uTrailPos,  trailPos);
+    gl.uniform2fv(uTrailVel,  trailVel);
+    gl.uniform1fv(uTrailTime, trailTime);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     requestAnimationFrame(tick);
   }
