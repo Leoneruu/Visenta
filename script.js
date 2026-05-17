@@ -7,26 +7,32 @@ window.addEventListener('scroll', () => {
 }, { passive: true });
 
 /* ============================
-   WEBGL BACKGROUND SHADER
+   WEBGL BACKGROUND – GREEN HILLS SHADER
    ============================ */
 (function initWebGL() {
   const canvas = document.getElementById('bg-canvas');
 
+  /* ── Vertex shader: fullscreen triangle strip ─────────────────────── */
   const VS = `
     attribute vec2 a_pos;
     void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }
   `;
 
-  /* Domain-warped fBm fluid
-     Two uniforms drive the motion:
-       u_t      – wall-clock seconds (very slow ambient drift)
-       u_scroll – 0..1 scroll progress (main scroll-driven movement) */
+  /* ── Fragment shader ──────────────────────────────────────────────────
+       Three uniforms drive the scene:
+         u_t      – wall-clock seconds  → slow ambient drift
+         u_scroll – 0..1 page progress  → fly-over movement + phase advance
+         u_mouse  – 0..1 cursor x/y     → subtle terrain pull toward cursor
+     ──────────────────────────────────────────────────────────────────── */
   const FS = `
     precision mediump float;
+
     uniform float u_t;
     uniform float u_scroll;
+    uniform vec2  u_mouse;
     uniform vec2  u_res;
 
+    /* ── Noise primitives ─────────────────────────────────────────────── */
     float hash(vec2 p) {
       p  = fract(p * vec2(127.1, 311.7));
       p += dot(p, p + 45.32);
@@ -36,19 +42,20 @@ window.addEventListener('scroll', () => {
     float vnoise(vec2 p) {
       vec2 i = floor(p);
       vec2 f = fract(p);
-      vec2 u = f * f * (3.0 - 2.0 * f);
+      /* quintic interpolation for smoother look than cubic */
+      vec2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
       return mix(
-        mix(hash(i),              hash(i + vec2(1.0, 0.0)), u.x),
+        mix(hash(i),               hash(i + vec2(1.0, 0.0)), u.x),
         mix(hash(i + vec2(0.0,1.0)), hash(i + vec2(1.0,1.0)), u.x),
         u.y
       );
     }
 
-    /* 4 octaves – good balance of detail vs. fill-rate */
+    /* Standard fBm – 5 octaves for smooth rolling hills */
     float fbm(vec2 p) {
       float v = 0.0, a = 0.5;
-      mat2  m = mat2(1.6, 1.2, -1.2, 1.6);
-      for (int i = 0; i < 4; i++) {
+      mat2  m = mat2(1.6, 1.2, -1.2, 1.6); /* rotation to avoid axis alignment */
+      for (int i = 0; i < 5; i++) {
         v += a * vnoise(p);
         p  = m * p;
         a *= 0.5;
@@ -56,67 +63,105 @@ window.addEventListener('scroll', () => {
       return v;
     }
 
+    /* Ridged fBm – inverts valleys into sharp crests, giving hill-ridge look */
+    float rfbm(vec2 p) {
+      float v = 0.0, a = 0.5;
+      mat2  m = mat2(1.8, 0.9, -0.9, 1.8);
+      for (int i = 0; i < 4; i++) {
+        float n = vnoise(p);
+        v += a * (1.0 - abs(n * 2.0 - 1.0)); /* tent → ridge at n=0.5 */
+        p  = m * p;
+        a *= 0.45;
+      }
+      return v;
+    }
+
     void main() {
-      vec2 uv = (gl_FragCoord.xy - 0.5 * u_res) / u_res.y;
+      /* Aspect-correct UV, Y-up */
+      vec2 uv = gl_FragCoord.xy / u_res;
+      uv.x   *= u_res.x / u_res.y;
 
-      /* Scroll drives the main phase, real-time adds slow ambient drift */
-      float t = u_t * 0.04 + u_scroll * 7.0;
+      /* ── Mouse influence ──────────────────────────────────────────────
+           Convert 0..1 → -0.5..+0.5. Apply a soft radial falloff so
+           the pull is strongest near the cursor and fades at the edges. */
+      vec2  mUV   = vec2(u_mouse.x * u_res.x / u_res.y, u_mouse.y);
+      vec2  mDelta = mUV - uv;
+      float mDist  = length(mDelta);
+      /* Gaussian-ish pull: terrain domain is nudged 0..±0.12 toward cursor */
+      vec2  mouseWarp = mDelta * 0.12 * exp(-mDist * mDist * 4.0);
 
-      /* ── Pass 1: warp vector q ──────────────────────────────────────── */
+      /* ── Time: real-time ambient + scroll-driven phase ─────────────── */
+      float t = u_t * 0.045 + u_scroll * 6.0;
+
+      /* ── Terrain UV: scroll shifts Y (fly-over), mouse warps locally ─ */
+      vec2 p = uv;
+      p.y   += u_scroll * 2.2;   /* vertical camera pan */
+      p     -= mouseWarp;        /* pull terrain toward cursor */
+
+      /* ── Domain warp: two-pass, gives organic non-repetitive shapes ── */
       vec2 q = vec2(
-        fbm(uv * 3.0 + vec2(0.00, 0.00) + t * 0.60),
-        fbm(uv * 3.0 + vec2(5.20, 1.30) + t * 0.60)
+        fbm(p * 1.8 + vec2(0.00, 0.00) + t * 0.38),
+        fbm(p * 1.8 + vec2(5.20, 1.30) + t * 0.38)
       );
-
-      /* ── Pass 2: warp vector r ──────────────────────────────────────── */
       vec2 r = vec2(
-        fbm(uv * 2.5 + 4.0 * q + vec2(1.70, 9.20) + t * 0.35),
-        fbm(uv * 2.5 + 4.0 * q + vec2(8.30, 2.80) + t * 0.45)
+        fbm(p * 1.4 + 2.8 * q + vec2(1.70, 9.20) + t * 0.22),
+        fbm(p * 1.4 + 2.8 * q + vec2(8.30, 2.80) + t * 0.28)
       );
 
-      /* ── Final density field ────────────────────────────────────────── */
-      float f = fbm(uv * 2.0 + 4.0 * r + t * 0.10);
+      /* ── Height field: blend smooth hills + sharp ridges ───────────── */
+      float hills  = fbm(p * 1.2 + 2.5 * r + t * 0.10);
+      float ridges = rfbm(p * 2.2 + r * 1.8 + t * 0.07);
+      float h      = hills * 0.68 + ridges * 0.32;
 
-      /* ── Color ramp: near-black → dark navy → purple → blue-white ──── */
-      vec3 col = mix(
-        vec3(0.008, 0.008, 0.015),
-        vec3(0.030, 0.040, 0.100),
-        smoothstep(0.0, 1.0, f * 2.5)
-      );
-      col = mix(col,
-        vec3(0.070, 0.050, 0.180),
-        smoothstep(0.0, 1.0, f * 1.8 - 0.10)
-      );
-      col = mix(col,
-        vec3(0.480, 0.580, 0.860),
-        smoothstep(0.58, 1.0, f * f * 2.9)
-      );
-      col = mix(col,
-        vec3(0.88, 0.93, 1.00),
-        smoothstep(0.68, 1.0, f * f * f * 4.2)
-      );
+      /* ── Fake directional lighting from top-right ─────────────────────
+           Use q as a rough surface-gradient estimate; dot against a sun
+           vector gives cheap Lambertian-style shading with no extra samples. */
+      vec2  qN    = q - vec2(0.5);      /* center q around zero */
+      float sun   = dot(normalize(qN + vec2(0.001)), vec2(0.6, 0.8));
+      float shade = 0.72 + 0.28 * clamp(sun, 0.0, 1.0);
 
-      /* Contrast accent from warp magnitude */
-      col *= 1.0 - length(r) * 0.22;
+      /* ── Green terrain color ramp ─────────────────────────────────────
+           near-black at valley → dark forest → hillside → vivid peak     */
+      vec3 cValley = vec3(0.003, 0.014, 0.005);
+      vec3 cFloor  = vec3(0.008, 0.042, 0.013);
+      vec3 cForest = vec3(0.022, 0.105, 0.030);
+      vec3 cHill   = vec3(0.055, 0.235, 0.065);
+      vec3 cPeak   = vec3(0.105, 0.400, 0.095);
+      vec3 cCrest  = vec3(0.185, 0.600, 0.145);
 
-      /* Radial vignette – deep black at edges */
-      float vig = 1.0 - smoothstep(0.30, 1.15, length(uv));
-      col *= mix(0.04, 1.0, vig);
+      vec3 col = cValley;
+      col = mix(col, cFloor,  smoothstep(0.06, 0.26, h));
+      col = mix(col, cForest, smoothstep(0.20, 0.44, h));
+      col = mix(col, cHill,   smoothstep(0.36, 0.60, h));
+      col = mix(col, cPeak,   smoothstep(0.52, 0.76, h));
+      col = mix(col, cCrest,  smoothstep(0.68, 0.90, h) * ridges);
 
-      /* Global brightness cap so white text always reads */
-      col *= 0.72;
+      /* Apply directional shading */
+      col *= shade;
+
+      /* Micro-contour lines: very subtle striations across the terrain */
+      float contour = fract(h * 10.0);
+      float line    = 1.0 - smoothstep(0.0, 0.04, abs(contour - 0.5) - 0.47);
+      col *= 1.0 - line * 0.10;
+
+      /* ── Vignette: radial darkening toward edges ────────────────────── */
+      vec2  vUV = gl_FragCoord.xy / u_res - 0.5;
+      float vig = 1.0 - smoothstep(0.28, 1.10, length(vUV));
+      col *= mix(0.03, 1.0, vig);
+
+      /* ── Global brightness cap: keeps white text readable ───────────── */
+      col *= 0.80;
 
       gl_FragColor = vec4(col, 1.0);
     }
   `;
 
-  /* ── GL setup ─────────────────────────────────────────────────────── */
+  /* ── GL context ───────────────────────────────────────────────────── */
   const gl = canvas.getContext('webgl')
           || canvas.getContext('experimental-webgl');
 
   if (!gl) {
-    // WebGL unavailable – show solid dark background
-    canvas.parentElement.style.background = '#06060a';
+    canvas.parentElement.style.background = '#020a03';
     return;
   }
 
@@ -141,24 +186,23 @@ window.addEventListener('scroll', () => {
   }
   gl.useProgram(prog);
 
-  /* Fullscreen quad as triangle strip: two triangles covering NDC */
+  /* Fullscreen quad – two triangles as a strip */
   const quadBuf = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
-  gl.bufferData(
-    gl.ARRAY_BUFFER,
+  gl.bufferData(gl.ARRAY_BUFFER,
     new Float32Array([-1,-1,  1,-1,  -1,1,  1,1]),
     gl.STATIC_DRAW
   );
-
-  const aPos  = gl.getAttribLocation(prog,  'a_pos');
+  const aPos = gl.getAttribLocation(prog, 'a_pos');
   gl.enableVertexAttribArray(aPos);
   gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
 
   const uT      = gl.getUniformLocation(prog, 'u_t');
   const uScroll = gl.getUniformLocation(prog, 'u_scroll');
+  const uMouse  = gl.getUniformLocation(prog, 'u_mouse');
   const uRes    = gl.getUniformLocation(prog, 'u_res');
 
-  /* Cap DPR at 1.5 – background is blurry, full retina res not needed */
+  /* Background is organic/blurry – cap DPR to save fill-rate */
   const DPR = Math.min(window.devicePixelRatio || 1, 1.5);
 
   function resize() {
@@ -170,7 +214,7 @@ window.addEventListener('scroll', () => {
   resize();
   window.addEventListener('resize', resize);
 
-  /* ── Scroll tracking with lerp ────────────────────────────────────── */
+  /* ── Scroll tracking ──────────────────────────────────────────────── */
   let scrollTarget = 0;
   let scrollSmooth = 0;
 
@@ -181,11 +225,33 @@ window.addEventListener('scroll', () => {
     scrollTarget = window.scrollY / maxScroll;
   }, { passive: true });
 
+  /* ── Mouse tracking (lerped for smoothness) ───────────────────────── */
+  /* Start centered so there's no jump before first mousemove */
+  let mouseTarget = { x: 0.5, y: 0.5 };
+  let mouseSmooth = { x: 0.5, y: 0.5 };
+
+  window.addEventListener('mousemove', (e) => {
+    mouseTarget.x =        e.clientX / window.innerWidth;
+    mouseTarget.y = 1.0 - (e.clientY / window.innerHeight); /* flip Y for GL */
+  }, { passive: true });
+
+  /* Touch support: treat first touch as mouse */
+  window.addEventListener('touchmove', (e) => {
+    const t = e.touches[0];
+    mouseTarget.x =        t.clientX / window.innerWidth;
+    mouseTarget.y = 1.0 - (t.clientY / window.innerHeight);
+  }, { passive: true });
+
   /* ── Render loop ──────────────────────────────────────────────────── */
   function tick(ts) {
-    scrollSmooth += (scrollTarget - scrollSmooth) * 0.055;
+    const k = 0.055; /* lerp factor – smaller = smoother/lazier */
+    scrollSmooth  += (scrollTarget  - scrollSmooth)  * k;
+    mouseSmooth.x += (mouseTarget.x - mouseSmooth.x) * k * 0.7;
+    mouseSmooth.y += (mouseTarget.y - mouseSmooth.y) * k * 0.7;
+
     gl.uniform1f(uT,      ts * 0.001);
     gl.uniform1f(uScroll, scrollSmooth);
+    gl.uniform2f(uMouse,  mouseSmooth.x, mouseSmooth.y);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     requestAnimationFrame(tick);
   }
