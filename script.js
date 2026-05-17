@@ -154,23 +154,48 @@ window.addEventListener('scroll', () => {
       float ridges = rfbm(p * 2.2 + r * 1.8 + t * 0.07);
       float h      = hills * 0.68 + ridges * 0.32;
 
-      /* Cheap directional shading from q gradient × sun vector */
-      vec2  qN    = q - 0.5;
-      float sun   = dot(normalize(qN + vec2(0.001)), vec2(0.6, 0.8));
-      float shade = 0.72 + 0.28 * clamp(sun, 0.0, 1.0);
+      /* ── Metallic shading ────────────────────────────────────────────────
+           Metal needs high-contrast diffuse + a sharp specular highlight.
+           We approximate both from the q warp-gradient, which acts as a
+           cheap surface-normal estimate (no extra texture samples needed).
 
-      /* Green terrain ramp: deep valley → dark forest → peak → sunlit crest */
-      vec3 col = vec3(0.003, 0.014, 0.005);
-      col = mix(col, vec3(0.008, 0.042, 0.013), smoothstep(0.06, 0.26, h));
-      col = mix(col, vec3(0.022, 0.105, 0.030), smoothstep(0.20, 0.44, h));
-      col = mix(col, vec3(0.055, 0.235, 0.065), smoothstep(0.36, 0.60, h));
-      col = mix(col, vec3(0.105, 0.400, 0.095), smoothstep(0.52, 0.76, h));
-      col = mix(col, vec3(0.185, 0.600, 0.145), smoothstep(0.68, 0.90, h) * ridges);
+           Diffuse: wide, low-frequency light/shadow across the surface.
+           Specular: narrow, high-intensity peak on ridges facing the key light.
+           Fresnel:  gentle rim brightening where the surface curves away.      */
+      vec2  qN     = q - 0.5;
+      vec2  qDir   = normalize(qN + vec2(0.001));
+      vec2  sunDir = normalize(vec2(0.55, 0.82));
+
+      float diffuse  = dot(qDir, sunDir);                          /* −1..1    */
+      float specPow  = pow(max(0.0, diffuse), 6.0);                /* Phong    */
+      float specular = pow(specPow, 3.0) * 1.8;                   /* sharp    */
+      float rim      = 1.0 - clamp(dot(qDir, vec2(0.0, 1.0)), 0.0, 1.0);
+
+      /* High-contrast diffuse for metallic drama */
+      float shade = 0.30 + 0.70 * clamp(diffuse * 0.5 + 0.5, 0.0, 1.0);
+
+      /* ── Liquid aluminium color ramp ────────────────────────────────────
+           deep shadow → graphite → cool mid-grey → brushed silver → specular  */
+      vec3 col = vec3(0.018, 0.020, 0.026);                        /* shadow   */
+      col = mix(col, vec3(0.055, 0.060, 0.072), smoothstep(0.06, 0.28, h));
+      col = mix(col, vec3(0.165, 0.175, 0.205), smoothstep(0.20, 0.46, h));
+      col = mix(col, vec3(0.390, 0.410, 0.460), smoothstep(0.36, 0.62, h));
+      col = mix(col, vec3(0.680, 0.700, 0.760), smoothstep(0.52, 0.76, h));
+      col = mix(col, vec3(0.910, 0.930, 0.975), smoothstep(0.68, 0.88, h));
+
+      /* Hard specular: bright near-white flash on ridges facing the light   */
+      col = mix(col, vec3(0.975, 0.985, 1.000),
+                smoothstep(0.55, 1.0, ridges) * specular * 0.90);
+
+      /* Rim: subtle brightening on curved-away surfaces                     */
+      col += vec3(0.04, 0.045, 0.055) * rim * rim * 0.35;
+
+      /* Apply diffuse shading */
       col *= shade;
 
-      /* Micro-contour lines */
+      /* Micro-contour lines – fainter on metal (almost invisible) */
       float ct = fract(h * 10.0);
-      col *= 1.0 - (1.0 - smoothstep(0.0, 0.04, abs(ct - 0.5) - 0.47)) * 0.10;
+      col *= 1.0 - (1.0 - smoothstep(0.0, 0.04, abs(ct - 0.5) - 0.47)) * 0.06;
 
       /* Radial vignette */
       vec2  vUV = gl_FragCoord.xy / u_res - 0.5;
