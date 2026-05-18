@@ -108,6 +108,15 @@ button { font-family: inherit; }
   transition: width 0.12s linear;
 }
 
+.loader-pct {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.5);
+  text-align: center;
+}
+
 /* ============================
    GLOBAL FIXED BACKGROUND CANVAS
    ============================ */

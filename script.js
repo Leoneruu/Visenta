@@ -11,14 +11,18 @@ window.addEventListener('scroll', () => {
    ─────────────────────────────────────────────────────────────────────────
    Two independent image sets:
 
-   Loader_001.jpg … Loader_015.jpg  (15 frames)
-     Displayed centered on the black loading screen.  The shown frame is
-     proportional to bg-load progress: frame = round(pct * 14).
+   Loader_001.jpg … Loader_061.jpg  (61 frames)
+     Displayed centered on the black loading screen.
+     Frame index = round(pct × 60) — frame 1 at 0 %, frame 31 at 50 %,
+     frame 61 at 100 %.
 
    background_001.jpg … background_145.jpg  (145 frames)
-     Preloaded in parallel.  Each resolved image advances the progress bar
-     and updates the loader animation frame.  When all 145 are ready the
-     loader fades out and the scroll-driven background begins.
+     Preloaded in parallel.  Every settled request (success OR error) counts
+     toward progress so a 404 never stalls the bar.  When all 145 are
+     settled the loader fades out and the scroll driver starts.
+
+   Fallback: a 10 s timeout always dismisses the loader regardless of
+   how many frames actually loaded.
    ─────────────────────────────────────────────────────────────────────── */
 (function initFrameSeq() {
   /* ── DOM refs ───────────────────────────────────────────────────────── */
@@ -28,10 +32,11 @@ window.addEventListener('scroll', () => {
   const ldrCtx    = ldrCanvas.getContext('2d');
   const loaderEl  = document.getElementById('loading-screen');
   const barFill   = document.getElementById('loader-bar-fill');
+  const pctLabel  = document.getElementById('loader-pct');
 
   /* ── Constants ──────────────────────────────────────────────────────── */
   const BG_TOTAL  = 145;
-  const LDR_TOTAL = 15;
+  const LDR_TOTAL = 61;
   const DPR       = Math.min(window.devicePixelRatio || 1, 1.5);
 
   /* ── Image stores ───────────────────────────────────────────────────── */
@@ -62,18 +67,16 @@ window.addEventListener('scroll', () => {
     bgCtx.drawImage(img, (cw - dw) / 2, (ch - dh) / 2, dw, dh);
   }
 
-  /* ── Loader canvas – sized to natural image dimensions ─────────────── */
+  /* ── Loader canvas ──────────────────────────────────────────────────── */
   let ldrSized = false;
 
-  /* Contain-fit draw onto loader canvas (centered, no cropping) */
   function drawLoader(idx) {
     const img = ldrFrames[idx];
     if (!img || !img.complete || !img.naturalWidth) return;
 
-    /* Size the canvas once we know the image dimensions */
     if (!ldrSized) {
-      const maxW = Math.round(window.innerWidth  * 0.9);
-      const maxH = Math.round(window.innerHeight * 0.70);
+      const maxW  = Math.round(window.innerWidth  * 0.9);
+      const maxH  = Math.round(window.innerHeight * 0.70);
       const scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1);
       ldrCanvas.width  = Math.round(img.naturalWidth  * scale);
       ldrCanvas.height = Math.round(img.naturalHeight * scale);
@@ -84,52 +87,62 @@ window.addEventListener('scroll', () => {
     ldrCtx.drawImage(img, 0, 0, ldrCanvas.width, ldrCanvas.height);
   }
 
-  /* ── Preload loader frames (15) – start immediately ────────────────── */
-  let ldrLoaded = 0;
+  /* ── Preload loader frames (61) ─────────────────────────────────────── */
   for (let i = 0; i < LDR_TOTAL; i++) {
     const img = new Image();
-    img.onload = img.onerror = function () {
-      ldrLoaded++;
-      /* Draw first loader frame as soon as it arrives */
-      if (ldrLoaded === 1 && img.complete && img.naturalWidth) drawLoader(i);
-    };
+    img.onload = img.onerror = (function (idx) {
+      return function () {
+        if (idx === 0 && img.complete && img.naturalWidth) drawLoader(0);
+      };
+    }(i));
     img.src = `Loader_${pad(i + 1)}.jpg`;
     ldrFrames[i] = img;
   }
 
-  /* ── Preload background frames (145) – tracks overall progress ─────── */
-  let bgLoaded = 0;
+  /* ── Progress helper – updates bar, label, and loader frame ─────────── */
+  function onProgress(pct) {
+    const p = Math.round(pct * 100);
+    barFill.style.width = p + '%';
+    pctLabel.textContent = p + '%';
+    const ldrIdx = Math.min(Math.round(pct * (LDR_TOTAL - 1)), LDR_TOTAL - 1);
+    drawLoader(ldrIdx);
+  }
 
-  function preloadBg(onDone) {
+  /* ── Dismiss loader (runs exactly once) ─────────────────────────────── */
+  let dismissed = false;
+  function dismiss() {
+    if (dismissed) return;
+    dismissed = true;
+    onProgress(1);          /* ensure bar and label show 100 % */
+    drawBg(0);
+    loaderEl.classList.add('hidden');
+    loaderEl.addEventListener('transitionend', () => {
+      if (loaderEl.parentNode) loaderEl.remove();
+    }, { once: true });
+    startScrollDriver();
+  }
+
+  /* 10 s hard fallback */
+  setTimeout(dismiss, 10000);
+
+  /* ── Preload background frames (145) ────────────────────────────────── */
+  let bgSettled = 0;
+
+  function preloadBg() {
     for (let i = 0; i < BG_TOTAL; i++) {
       const img = new Image();
+      /* Both onload and onerror count — a failed frame never stalls progress */
       img.onload = img.onerror = function () {
-        bgLoaded++;
-
-        /* Progress 0 → 1 */
-        const pct = bgLoaded / BG_TOTAL;
-
-        /* Update bar */
-        barFill.style.width = Math.round(pct * 100) + '%';
-
-        /* Update loader animation frame proportional to progress */
-        const ldrIdx = Math.min(Math.round(pct * (LDR_TOTAL - 1)), LDR_TOTAL - 1);
-        drawLoader(ldrIdx);
-
-        if (bgLoaded === BG_TOTAL) onDone();
+        bgSettled++;
+        onProgress(bgSettled / BG_TOTAL);
+        if (bgSettled === BG_TOTAL) dismiss();
       };
       img.src = `background_${pad(i + 1)}.jpg`;
       bgFrames[i] = img;
     }
   }
 
-  /* ── Dismiss loader ─────────────────────────────────────────────────── */
-  function dismiss() {
-    loaderEl.classList.add('hidden');
-    loaderEl.addEventListener('transitionend', () => {
-      if (loaderEl.parentNode) loaderEl.remove();
-    }, { once: true });
-  }
+  preloadBg();
 
   /* ── Scroll driver ──────────────────────────────────────────────────── */
   function startScrollDriver() {
@@ -151,12 +164,6 @@ window.addEventListener('scroll', () => {
     requestAnimationFrame(tick);
   }
 
-  /* ── Boot ───────────────────────────────────────────────────────────── */
-  preloadBg(function onAllLoaded() {
-    drawBg(0);
-    dismiss();
-    startScrollDriver();
-  });
 }());
 
 /* ============================
