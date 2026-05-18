@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Impressum – Visenta</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- GLOBAL FIXED BACKGROUND (WebGL shader) -->
+  <div class="bg-video-wrapper">
+    <canvas id="bg-canvas"></canvas>
+    <div class="bg-video-overlay"></div>
+  </div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="navbar">
+    <a href="index.html" class="nav-brand">
+      <img src="Neues Logo.png" alt="Visenta Logo" class="nav-logo" />
+      <img src="Schriftzug.png" alt="Visenta" class="nav-wordmark" />
+    </a>
+    <a href="index.html" class="btn btn-nav">Jetzt kostenlos beraten lassen</a>
+  </nav>
+
+  <!-- CONTENT -->
+  <div class="subpage-wrapper">
+    <main class="subpage-main">
+      <div class="content-card">
+        <h1>Impressum</h1>
+
+        <h2>Angaben gemäß § 5 TMG</h2>
+        <p>
+          <strong>Visenta</strong><br />
+          Inhaber: Leon Kunze<br />
+          Friedländer Weg 18<br />
+          37085 Göttingen
+        </p>
+        <p>
+          Telefon: 0155 65953691<br />
+          E-Mail: <a href="mailto:kontakt@visenta.de">kontakt@visenta.de</a><br />
+          Website: <a href="https://www.visenta.de" target="_blank" rel="noopener">www.visenta.de</a>
+        </p>
+
+        <hr />
+
+        <h2>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h2>
+        <p>Leon Kunze, Anschrift wie oben</p>
+
+        <hr />
+
+        <h2>Haftungsausschluss</h2>
+        <p>
+          Trotz sorgfältiger inhaltlicher Kontrolle übernehmen wir keine Haftung für externe Links.
+          Für den Inhalt verlinkter Seiten sind ausschließlich deren Betreiber verantwortlich.
+        </p>
+
+        <hr />
+
+        <h2>Online-Streitbeilegung</h2>
+        <p>
+          Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit:<br />
+          <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="noopener">https://ec.europa.eu/consumers/odr</a>
+        </p>
+        <p>
+          Wir sind nicht verpflichtet und nicht bereit, an einem Streitbeilegungsverfahren vor einer
+          Verbraucherschlichtungsstelle teilzunehmen.
+        </p>
+      </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+      <div class="container footer-inner">
+        <div class="footer-brand">
+          <img src="Schriftzug.png" alt="Visenta" class="nav-wordmark" />
+        </div>
+        <div class="footer-legal">
+          <p class="footer-copy">&copy; 2026 Visenta. Alle Rechte vorbehalten.</p>
+          <a href="impressum.html">Impressum</a>
+          <a href="datenschutz.html">Datenschutz</a>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script src="shader-bg.js"></script>
+</body>
+</html>
