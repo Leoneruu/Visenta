@@ -72,9 +72,9 @@ button { font-family: inherit; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 14px;
+  gap: 20px;
   opacity: 1;
-  transition: opacity 0.5s ease;
+  transition: opacity 0.6s ease;
 }
 
 #loading-screen.hidden {
@@ -82,28 +82,30 @@ button { font-family: inherit; }
   pointer-events: none;
 }
 
-.loading-bar-wrap {
-  width: 220px;
+/* Loader animation canvas – sized by JS to fit the frame images */
+#loader-canvas {
+  display: block;
+  max-width: 90vw;
+  max-height: 70vh;
+}
+
+/* Progress bar sits directly below the canvas, one z-index above it */
+.loader-bar-wrap {
+  position: relative;
+  z-index: 1;
+  width: 260px;
   height: 2px;
-  background: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.15);
   border-radius: 2px;
   overflow: hidden;
 }
 
-.loading-bar-fill {
+.loader-bar-fill {
   height: 100%;
   width: 0%;
   background: #fff;
   border-radius: 2px;
-  transition: width 0.1s linear;
-}
-
-.loading-pct {
-  font-family: 'Outfit', sans-serif;
-  font-size: 0.75rem;
-  font-weight: 400;
-  letter-spacing: 0.1em;
-  color: rgba(255,255,255,0.45);
+  transition: width 0.12s linear;
 }
 
 /* ============================

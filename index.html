@@ -11,12 +11,12 @@
 </head>
 <body>
 
-  <!-- LOADING SCREEN – progress bar shown while frames preload -->
+  <!-- LOADING SCREEN – loader animation + progress bar while bg frames preload -->
   <div id="loading-screen" aria-hidden="true">
-    <div class="loading-bar-wrap">
-      <div class="loading-bar-fill" id="loading-bar-fill"></div>
+    <canvas id="loader-canvas"></canvas>
+    <div class="loader-bar-wrap">
+      <div class="loader-bar-fill" id="loader-bar-fill"></div>
     </div>
-    <p class="loading-pct" id="loading-pct">0 %</p>
   </div>
 
   <!-- GLOBAL FIXED BACKGROUND CANVAS (frame sequence) -->

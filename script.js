@@ -7,90 +7,135 @@ window.addEventListener('scroll', () => {
 }, { passive: true });
 
 /* ============================
-   FRAME-SEQUENCE BACKGROUND – scroll-driven
+   LOADER ANIMATION + BACKGROUND PRELOAD
    ─────────────────────────────────────────────────────────────────────────
-   145 JPEG frames (background_001.jpg … background_145.jpg) are preloaded
-   into Image objects before the page is revealed.  A progress bar tracks
-   the load.  Once all frames are ready, a rAF loop maps scroll position
-   (0 → bottom) to frame index (0 → 144) with a lerp factor for smooth
-   forward and backward scrubbing.
+   Two independent image sets:
 
-   The canvas covers the viewport and draws each frame with "cover" logic
-   so the image always fills the screen regardless of aspect ratio.
+   Loader_001.jpg … Loader_015.jpg  (15 frames)
+     Displayed centered on the black loading screen.  The shown frame is
+     proportional to bg-load progress: frame = round(pct * 14).
+
+   background_001.jpg … background_145.jpg  (145 frames)
+     Preloaded in parallel.  Each resolved image advances the progress bar
+     and updates the loader animation frame.  When all 145 are ready the
+     loader fades out and the scroll-driven background begins.
    ─────────────────────────────────────────────────────────────────────── */
 (function initFrameSeq() {
-  const canvas    = document.getElementById('bg-canvas');
-  const ctx       = canvas.getContext('2d');
-  const loader    = document.getElementById('loading-screen');
-  const barFill   = document.getElementById('loading-bar-fill');
-  const pctLabel  = document.getElementById('loading-pct');
+  /* ── DOM refs ───────────────────────────────────────────────────────── */
+  const bgCanvas  = document.getElementById('bg-canvas');
+  const bgCtx     = bgCanvas.getContext('2d');
+  const ldrCanvas = document.getElementById('loader-canvas');
+  const ldrCtx    = ldrCanvas.getContext('2d');
+  const loaderEl  = document.getElementById('loading-screen');
+  const barFill   = document.getElementById('loader-bar-fill');
 
-  const TOTAL = 145;
-  const DPR   = Math.min(window.devicePixelRatio || 1, 1.5);
-  const frames = new Array(TOTAL);
+  /* ── Constants ──────────────────────────────────────────────────────── */
+  const BG_TOTAL  = 145;
+  const LDR_TOTAL = 15;
+  const DPR       = Math.min(window.devicePixelRatio || 1, 1.5);
 
-  /* ── Canvas sizing ─────────────────────────────────────────────────── */
-  function resize() {
-    canvas.width  = Math.round(window.innerWidth  * DPR);
-    canvas.height = Math.round(window.innerHeight * DPR);
+  /* ── Image stores ───────────────────────────────────────────────────── */
+  const bgFrames  = new Array(BG_TOTAL);
+  const ldrFrames = new Array(LDR_TOTAL);
+
+  function pad(n) { return String(n).padStart(3, '0'); }
+
+  /* ── Background canvas sizing ───────────────────────────────────────── */
+  let bgLastIdx = 0;
+
+  function resizeBg() {
+    bgCanvas.width  = Math.round(window.innerWidth  * DPR);
+    bgCanvas.height = Math.round(window.innerHeight * DPR);
   }
-  resize();
-  window.addEventListener('resize', () => { resize(); drawFrame(lastIdx); });
+  resizeBg();
+  window.addEventListener('resize', () => { resizeBg(); drawBg(bgLastIdx); });
 
-  /* ── Cover-fit draw ────────────────────────────────────────────────── */
-  let lastIdx = 0;
-
-  function drawFrame(idx) {
-    const img = frames[idx];
+  /* Cover-fit draw onto background canvas */
+  function drawBg(idx) {
+    const img = bgFrames[idx];
     if (!img || !img.complete || !img.naturalWidth) return;
-    lastIdx = idx;
-
-    const cw = canvas.width,  ch = canvas.height;
+    bgLastIdx = idx;
+    const cw = bgCanvas.width,  ch = bgCanvas.height;
     const iw = img.naturalWidth, ih = img.naturalHeight;
     const scale = Math.max(cw / iw, ch / ih);
     const dw = iw * scale, dh = ih * scale;
-    ctx.drawImage(img, (cw - dw) / 2, (ch - dh) / 2, dw, dh);
+    bgCtx.drawImage(img, (cw - dw) / 2, (ch - dh) / 2, dw, dh);
   }
 
-  /* ── Preload all frames ────────────────────────────────────────────── */
-  function pad(n) { return String(n).padStart(3, '0'); }
+  /* ── Loader canvas – sized to natural image dimensions ─────────────── */
+  let ldrSized = false;
 
-  let loaded = 0;
+  /* Contain-fit draw onto loader canvas (centered, no cropping) */
+  function drawLoader(idx) {
+    const img = ldrFrames[idx];
+    if (!img || !img.complete || !img.naturalWidth) return;
 
-  function preload(onDone) {
-    for (let i = 0; i < TOTAL; i++) {
+    /* Size the canvas once we know the image dimensions */
+    if (!ldrSized) {
+      const maxW = Math.round(window.innerWidth  * 0.9);
+      const maxH = Math.round(window.innerHeight * 0.70);
+      const scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1);
+      ldrCanvas.width  = Math.round(img.naturalWidth  * scale);
+      ldrCanvas.height = Math.round(img.naturalHeight * scale);
+      ldrSized = true;
+    }
+
+    ldrCtx.clearRect(0, 0, ldrCanvas.width, ldrCanvas.height);
+    ldrCtx.drawImage(img, 0, 0, ldrCanvas.width, ldrCanvas.height);
+  }
+
+  /* ── Preload loader frames (15) – start immediately ────────────────── */
+  let ldrLoaded = 0;
+  for (let i = 0; i < LDR_TOTAL; i++) {
+    const img = new Image();
+    img.onload = img.onerror = function () {
+      ldrLoaded++;
+      /* Draw first loader frame as soon as it arrives */
+      if (ldrLoaded === 1 && img.complete && img.naturalWidth) drawLoader(i);
+    };
+    img.src = `Loader_${pad(i + 1)}.jpg`;
+    ldrFrames[i] = img;
+  }
+
+  /* ── Preload background frames (145) – tracks overall progress ─────── */
+  let bgLoaded = 0;
+
+  function preloadBg(onDone) {
+    for (let i = 0; i < BG_TOTAL; i++) {
       const img = new Image();
-      /* Count both success and error so the bar always reaches 100 % */
       img.onload = img.onerror = function () {
-        loaded++;
-        const pct = Math.round((loaded / TOTAL) * 100);
-        barFill.style.width = pct + '%';
-        pctLabel.textContent = pct + ' %';
+        bgLoaded++;
 
-        /* Draw the first successfully loaded frame immediately so the
-           canvas isn't blank while the rest of the frames arrive.     */
-        if (loaded === 1 && img.complete && img.naturalWidth) drawFrame(i);
+        /* Progress 0 → 1 */
+        const pct = bgLoaded / BG_TOTAL;
 
-        if (loaded === TOTAL) onDone();
+        /* Update bar */
+        barFill.style.width = Math.round(pct * 100) + '%';
+
+        /* Update loader animation frame proportional to progress */
+        const ldrIdx = Math.min(Math.round(pct * (LDR_TOTAL - 1)), LDR_TOTAL - 1);
+        drawLoader(ldrIdx);
+
+        if (bgLoaded === BG_TOTAL) onDone();
       };
       img.src = `background_${pad(i + 1)}.jpg`;
-      frames[i] = img;
+      bgFrames[i] = img;
     }
   }
 
-  /* ── Dismiss loading screen ────────────────────────────────────────── */
+  /* ── Dismiss loader ─────────────────────────────────────────────────── */
   function dismiss() {
-    loader.classList.add('hidden');
-    loader.addEventListener('transitionend', () => {
-      if (loader.parentNode) loader.remove();
+    loaderEl.classList.add('hidden');
+    loaderEl.addEventListener('transitionend', () => {
+      if (loaderEl.parentNode) loaderEl.remove();
     }, { once: true });
   }
 
-  /* ── Scroll driver ─────────────────────────────────────────────────── */
+  /* ── Scroll driver ──────────────────────────────────────────────────── */
   function startScrollDriver() {
-    let targetFrac = 0;   /* 0..1 derived from scroll position */
-    let smoothFrac = 0;   /* lerped fraction                   */
-    const LERP = 0.12;    /* lower = smoother but slightly laggy */
+    let targetFrac = 0;
+    let smoothFrac = 0;
+    const LERP = 0.12;
 
     window.addEventListener('scroll', () => {
       const maxScroll = Math.max(document.body.scrollHeight - window.innerHeight, 1);
@@ -99,20 +144,16 @@ window.addEventListener('scroll', () => {
 
     function tick() {
       smoothFrac += (targetFrac - smoothFrac) * LERP;
-      const idx = Math.min(
-        Math.round(smoothFrac * (TOTAL - 1)),
-        TOTAL - 1
-      );
-      if (idx !== lastIdx) drawFrame(idx);
+      const idx = Math.min(Math.round(smoothFrac * (BG_TOTAL - 1)), BG_TOTAL - 1);
+      if (idx !== bgLastIdx) drawBg(idx);
       requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);
   }
 
-  /* ── Boot ──────────────────────────────────────────────────────────── */
-  preload(function onAllLoaded() {
-    /* Draw frame 0 (scroll position = top) before revealing the page */
-    drawFrame(0);
+  /* ── Boot ───────────────────────────────────────────────────────────── */
+  preloadBg(function onAllLoaded() {
+    drawBg(0);
     dismiss();
     startScrollDriver();
   });
