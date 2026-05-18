@@ -74,9 +74,10 @@ window.addEventListener('scroll', () => {
     const img = ldrFrames[idx];
     if (!img || !img.complete || !img.naturalWidth) return;
 
+    /* Size canvas once using 1/3-of-viewport bounds (3× smaller than full) */
     if (!ldrSized) {
-      const maxW  = Math.round(window.innerWidth  * 0.9);
-      const maxH  = Math.round(window.innerHeight * 0.70);
+      const maxW  = Math.round(window.innerWidth  * 0.30);
+      const maxH  = Math.round(window.innerHeight * 0.24);
       const scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1);
       ldrCanvas.width  = Math.round(img.naturalWidth  * scale);
       ldrCanvas.height = Math.round(img.naturalHeight * scale);
@@ -87,16 +88,27 @@ window.addEventListener('scroll', () => {
     ldrCtx.drawImage(img, 0, 0, ldrCanvas.width, ldrCanvas.height);
   }
 
-  /* ── Preload loader frames (61) ─────────────────────────────────────── */
-  for (let i = 0; i < LDR_TOTAL; i++) {
-    const img = new Image();
-    img.onload = img.onerror = (function (idx) {
-      return function () {
-        if (idx === 0 && img.complete && img.naturalWidth) drawLoader(0);
-      };
-    }(i));
-    img.src = `Loader_${pad(i + 1)}.jpg`;
-    ldrFrames[i] = img;
+  /* ── Preload loader frames first (61) – bg preload starts only after ── */
+  /* All 61 loader frames must be ready before bg preload begins so that   */
+  /* onProgress() can always draw the correct frame without a missing-img  */
+  /* early-return. onload AND onerror both count so a 404 never stalls it. */
+  let ldrSettled = 0;
+
+  function startLoaderPreload() {
+    for (let i = 0; i < LDR_TOTAL; i++) {
+      const img = new Image();
+      img.onload = img.onerror = (function (idx) {
+        return function () {
+          ldrSettled++;
+          /* Show frame 0 as soon as the first image is ready */
+          if (ldrSettled === 1 && img.complete && img.naturalWidth) drawLoader(0);
+          /* Once all loader frames are settled, kick off bg preload */
+          if (ldrSettled === LDR_TOTAL) preloadBg();
+        };
+      }(i));
+      img.src = `Loader_${pad(i + 1)}.jpg`;
+      ldrFrames[i] = img;
+    }
   }
 
   /* ── Progress helper – updates bar, label, and loader frame ─────────── */
@@ -142,7 +154,7 @@ window.addEventListener('scroll', () => {
     }
   }
 
-  preloadBg();
+  startLoaderPreload();
 
   /* ── Scroll driver ──────────────────────────────────────────────────── */
   function startScrollDriver() {
