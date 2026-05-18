@@ -11,9 +11,21 @@
 </head>
 <body>
 
-  <!-- GLOBAL FIXED BACKGROUND -->
+  <!-- LOADING SCREEN – hidden once video readyState === 4 -->
+  <div id="loading-screen" aria-hidden="true">
+    <div class="loading-spinner"></div>
+  </div>
+
+  <!-- GLOBAL FIXED BACKGROUND VIDEO -->
   <div class="bg-video-wrapper">
-    <canvas id="bg-canvas"></canvas>
+    <video
+      id="bg-video"
+      src="background.mp4"
+      preload="auto"
+      muted
+      playsinline
+      disablepictureinpicture
+    ></video>
     <div class="bg-video-overlay"></div>
   </div>
 
