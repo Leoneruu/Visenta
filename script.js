@@ -76,8 +76,8 @@ window.addEventListener('scroll', () => {
 
     /* Size canvas once using 1/3-of-viewport bounds (3× smaller than full) */
     if (!ldrSized) {
-      const maxW  = Math.round(window.innerWidth  * 0.30);
-      const maxH  = Math.round(window.innerHeight * 0.24);
+      const maxW  = Math.round(window.innerWidth  * 0.15);
+      const maxH  = Math.round(window.innerHeight * 0.12);
       const scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1);
       ldrCanvas.width  = Math.round(img.naturalWidth  * scale);
       ldrCanvas.height = Math.round(img.naturalHeight * scale);
