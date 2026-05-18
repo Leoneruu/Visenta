@@ -10,37 +10,58 @@ window.addEventListener('scroll', () => {
    VIDEO BACKGROUND – scroll-driven, no playback
    ============================ */
 (function initVideo() {
-  const video    = document.getElementById('bg-video');
-  const loader   = document.getElementById('loading-screen');
+  const video  = document.getElementById('bg-video');
+  const loader = document.getElementById('loading-screen');
 
-  /* Freeze the video engine – we drive currentTime manually via scroll */
+  console.log('[Video] element found:', !!video, '| src:', video ? video.getAttribute('src') : 'n/a');
+  console.log('[Video] readyState at init:', video.readyState);
+
+  /* Freeze playback immediately – currentTime will be driven by scroll */
   video.playbackRate = 0;
+  video.currentTime  = 0;
 
-  /* Loading gate: wait for readyState === 4 (HAVE_ENOUGH_DATA) */
-  function onReady() {
-    video.playbackRate = 0;       /* re-assert after any browser auto-play attempt */
+  let ready = false;
+
+  function dismiss() {
+    if (ready) return;
+    ready = true;
+    console.log('[Video] ready – readyState:', video.readyState, '| duration:', video.duration);
+    video.playbackRate = 0;
     video.pause();
     loader.classList.add('hidden');
-    /* Remove from DOM after fade so it can't intercept events */
-    loader.addEventListener('transitionend', () => loader.remove(), { once: true });
+    loader.addEventListener('transitionend', () => {
+      if (loader.parentNode) loader.remove();
+    }, { once: true });
     startScrollDriver();
   }
 
-  if (video.readyState === 4) {
-    onReady();
+  /* Unblock at readyState >= 2 (HAVE_CURRENT_DATA – first frame available) */
+  if (video.readyState >= 2) {
+    dismiss();
   } else {
-    video.addEventListener('canplaythrough', onReady, { once: true });
-    /* Fallback: if the browser never fires canplaythrough (rare edge case),
-       hide the loader after 8 s so the page is never permanently blocked.  */
+    /* Listen to the first of these events that fires */
+    ['loadeddata', 'canplay', 'canplaythrough'].forEach(evt => {
+      video.addEventListener(evt, dismiss, { once: true });
+    });
+
+    /* Hard fallback – never block the page longer than 5 s */
     setTimeout(() => {
-      if (loader.parentNode) onReady();
-    }, 8000);
+      console.log('[Video] 5 s fallback – readyState:', video.readyState);
+      dismiss();
+    }, 5000);
   }
 
+  /* Debug poll – logs readyState every 500 ms until ready or 8 s */
+  const pollId = setInterval(() => {
+    console.log('[Video] poll readyState:', video.readyState);
+    if (ready) clearInterval(pollId);
+  }, 500);
+  setTimeout(() => clearInterval(pollId), 8000);
+
   function startScrollDriver() {
-    let targetTime = 0;   /* desired currentTime in seconds      */
-    let currentTime = 0;  /* lerped currentTime being applied    */
-    const LERP = 0.3;     /* per-frame smoothing factor          */
+    let targetTime = 0;  /* scroll-derived desired position (s) */
+    let smoothTime = 0;  /* lerped value actually written       */
+    const LERP = 0.3;
 
     window.addEventListener('scroll', () => {
       const maxScroll = Math.max(document.body.scrollHeight - window.innerHeight, 1);
@@ -48,14 +69,10 @@ window.addEventListener('scroll', () => {
     }, { passive: true });
 
     function tick() {
-      /* Lerp toward target — works equally for forward and backward scroll */
-      currentTime += (targetTime - currentTime) * LERP;
-
-      /* Only write when the delta is meaningful (avoids redundant seeks) */
-      if (Math.abs(currentTime - video.currentTime) > 0.001) {
-        video.currentTime = currentTime;
+      smoothTime += (targetTime - smoothTime) * LERP;
+      if (Math.abs(smoothTime - video.currentTime) > 0.001) {
+        video.currentTime = smoothTime;
       }
-
       requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);
