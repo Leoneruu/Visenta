@@ -7,76 +7,115 @@ window.addEventListener('scroll', () => {
 }, { passive: true });
 
 /* ============================
-   VIDEO BACKGROUND – scroll-driven, no playback
-   ============================ */
-(function initVideo() {
-  const video  = document.getElementById('bg-video');
-  const loader = document.getElementById('loading-screen');
+   FRAME-SEQUENCE BACKGROUND – scroll-driven
+   ─────────────────────────────────────────────────────────────────────────
+   145 JPEG frames (background_001.jpg … background_145.jpg) are preloaded
+   into Image objects before the page is revealed.  A progress bar tracks
+   the load.  Once all frames are ready, a rAF loop maps scroll position
+   (0 → bottom) to frame index (0 → 144) with a lerp factor for smooth
+   forward and backward scrubbing.
 
-  console.log('[Video] element found:', !!video, '| src:', video ? video.getAttribute('src') : 'n/a');
-  console.log('[Video] readyState at init:', video.readyState);
+   The canvas covers the viewport and draws each frame with "cover" logic
+   so the image always fills the screen regardless of aspect ratio.
+   ─────────────────────────────────────────────────────────────────────── */
+(function initFrameSeq() {
+  const canvas    = document.getElementById('bg-canvas');
+  const ctx       = canvas.getContext('2d');
+  const loader    = document.getElementById('loading-screen');
+  const barFill   = document.getElementById('loading-bar-fill');
+  const pctLabel  = document.getElementById('loading-pct');
 
-  /* Freeze playback immediately – currentTime will be driven by scroll */
-  video.playbackRate = 0;
-  video.currentTime  = 0;
+  const TOTAL = 145;
+  const DPR   = Math.min(window.devicePixelRatio || 1, 1.5);
+  const frames = new Array(TOTAL);
 
-  let ready = false;
+  /* ── Canvas sizing ─────────────────────────────────────────────────── */
+  function resize() {
+    canvas.width  = Math.round(window.innerWidth  * DPR);
+    canvas.height = Math.round(window.innerHeight * DPR);
+  }
+  resize();
+  window.addEventListener('resize', () => { resize(); drawFrame(lastIdx); });
 
+  /* ── Cover-fit draw ────────────────────────────────────────────────── */
+  let lastIdx = 0;
+
+  function drawFrame(idx) {
+    const img = frames[idx];
+    if (!img || !img.complete || !img.naturalWidth) return;
+    lastIdx = idx;
+
+    const cw = canvas.width,  ch = canvas.height;
+    const iw = img.naturalWidth, ih = img.naturalHeight;
+    const scale = Math.max(cw / iw, ch / ih);
+    const dw = iw * scale, dh = ih * scale;
+    ctx.drawImage(img, (cw - dw) / 2, (ch - dh) / 2, dw, dh);
+  }
+
+  /* ── Preload all frames ────────────────────────────────────────────── */
+  function pad(n) { return String(n).padStart(3, '0'); }
+
+  let loaded = 0;
+
+  function preload(onDone) {
+    for (let i = 0; i < TOTAL; i++) {
+      const img = new Image();
+      /* Count both success and error so the bar always reaches 100 % */
+      img.onload = img.onerror = function () {
+        loaded++;
+        const pct = Math.round((loaded / TOTAL) * 100);
+        barFill.style.width = pct + '%';
+        pctLabel.textContent = pct + ' %';
+
+        /* Draw the first successfully loaded frame immediately so the
+           canvas isn't blank while the rest of the frames arrive.     */
+        if (loaded === 1 && img.complete && img.naturalWidth) drawFrame(i);
+
+        if (loaded === TOTAL) onDone();
+      };
+      img.src = `background_${pad(i + 1)}.jpg`;
+      frames[i] = img;
+    }
+  }
+
+  /* ── Dismiss loading screen ────────────────────────────────────────── */
   function dismiss() {
-    if (ready) return;
-    ready = true;
-    console.log('[Video] ready – readyState:', video.readyState, '| duration:', video.duration);
-    video.playbackRate = 0;
-    video.pause();
     loader.classList.add('hidden');
     loader.addEventListener('transitionend', () => {
       if (loader.parentNode) loader.remove();
     }, { once: true });
-    startScrollDriver();
   }
 
-  /* Unblock at readyState >= 2 (HAVE_CURRENT_DATA – first frame available) */
-  if (video.readyState >= 2) {
-    dismiss();
-  } else {
-    /* Listen to the first of these events that fires */
-    ['loadeddata', 'canplay', 'canplaythrough'].forEach(evt => {
-      video.addEventListener(evt, dismiss, { once: true });
-    });
-
-    /* Hard fallback – never block the page longer than 5 s */
-    setTimeout(() => {
-      console.log('[Video] 5 s fallback – readyState:', video.readyState);
-      dismiss();
-    }, 5000);
-  }
-
-  /* Debug poll – logs readyState every 500 ms until ready or 8 s */
-  const pollId = setInterval(() => {
-    console.log('[Video] poll readyState:', video.readyState);
-    if (ready) clearInterval(pollId);
-  }, 500);
-  setTimeout(() => clearInterval(pollId), 8000);
-
+  /* ── Scroll driver ─────────────────────────────────────────────────── */
   function startScrollDriver() {
-    let targetTime = 0;  /* scroll-derived desired position (s) */
-    let smoothTime = 0;  /* lerped value actually written       */
-    const LERP = 0.3;
+    let targetFrac = 0;   /* 0..1 derived from scroll position */
+    let smoothFrac = 0;   /* lerped fraction                   */
+    const LERP = 0.12;    /* lower = smoother but slightly laggy */
 
     window.addEventListener('scroll', () => {
       const maxScroll = Math.max(document.body.scrollHeight - window.innerHeight, 1);
-      targetTime = (window.scrollY / maxScroll) * (video.duration || 0);
+      targetFrac = window.scrollY / maxScroll;
     }, { passive: true });
 
     function tick() {
-      smoothTime += (targetTime - smoothTime) * LERP;
-      if (Math.abs(smoothTime - video.currentTime) > 0.001) {
-        video.currentTime = smoothTime;
-      }
+      smoothFrac += (targetFrac - smoothFrac) * LERP;
+      const idx = Math.min(
+        Math.round(smoothFrac * (TOTAL - 1)),
+        TOTAL - 1
+      );
+      if (idx !== lastIdx) drawFrame(idx);
       requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);
   }
+
+  /* ── Boot ──────────────────────────────────────────────────────────── */
+  preload(function onAllLoaded() {
+    /* Draw frame 0 (scroll position = top) before revealing the page */
+    drawFrame(0);
+    dismiss();
+    startScrollDriver();
+  });
 }());
 
 /* ============================

@@ -11,21 +11,17 @@
 </head>
 <body>
 
-  <!-- LOADING SCREEN – hidden once video readyState === 4 -->
+  <!-- LOADING SCREEN – progress bar shown while frames preload -->
   <div id="loading-screen" aria-hidden="true">
-    <div class="loading-spinner"></div>
+    <div class="loading-bar-wrap">
+      <div class="loading-bar-fill" id="loading-bar-fill"></div>
+    </div>
+    <p class="loading-pct" id="loading-pct">0 %</p>
   </div>
 
-  <!-- GLOBAL FIXED BACKGROUND VIDEO -->
+  <!-- GLOBAL FIXED BACKGROUND CANVAS (frame sequence) -->
   <div class="bg-video-wrapper">
-    <video
-      id="bg-video"
-      src="background.mp4"
-      preload="auto"
-      muted
-      playsinline
-      disablepictureinpicture
-    ></video>
+    <canvas id="bg-canvas"></canvas>
     <div class="bg-video-overlay"></div>
   </div>
 
