@@ -364,7 +364,7 @@ step1Form.addEventListener('submit', (e) => {
 
 document.querySelector('.js-back-step').addEventListener('click', () => showStep(1));
 
-step2Form.addEventListener('submit', (e) => {
+step2Form.addEventListener('submit', async (e) => {
   e.preventDefault();
   const fd = new FormData(step2Form);
 
@@ -380,8 +380,39 @@ step2Form.addEventListener('submit', (e) => {
     return;
   }
 
-  renderSuccess();
-  showStep('success');
+  const submitBtn = step2Form.querySelector('[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Wird gesendet…';
+
+  try {
+    const res = await fetch('https://formspree.io/f/xzdwrbnj', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        'Firma':             formData.company,
+        'Ansprechpartner':   formData.contact,
+        'E-Mail':            formData.email,
+        'Telefon':           formData.phone,
+        'Website':           formData.website,
+        'Projekt-Typ':       formData.types.join(', '),
+        'Beschreibung':      formData.description,
+        'Wunschtermin':      formData.slotLabel,
+      }),
+    });
+
+    if (res.ok) {
+      renderSuccess();
+      showStep('success');
+    } else {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Fehler beim Senden. Bitte versuche es später erneut.');
+    }
+  } catch {
+    alert('Netzwerkfehler. Bitte überprüfe deine Verbindung und versuche es erneut.');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Beratungstermin anfragen';
+  }
 });
 
 function renderSuccess() {
