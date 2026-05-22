@@ -179,27 +179,28 @@ window.addEventListener('scroll', () => {
 }());
 
 /* ============================
-   3D TILT (glitch-free)
+   3D TILT
    ============================ */
-const MAX_TILT = 15;
+const MAX_TILT = 12;
 
 document.querySelectorAll('.tilt-card').forEach(card => {
-  let rafId = null;
-  let currentX = 0;
-  let currentY = 0;
-  let isOver = false;
+  let rafId   = null;
+  let currentX = 0, currentY = 0;
+  let isOver   = false;
 
-  card.style.willChange = 'transform';
+  card.style.willChange    = 'transform';
+  card.style.transformOrigin = 'center center';
 
   function applyTransform(rx, ry) {
     card.style.transform =
-      `perspective(800px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+      `perspective(900px) rotateX(${rx}deg) rotateY(${ry}deg)`;
   }
 
+  /* Smooth reset back to flat on mouseleave */
   function resetTick() {
     if (isOver) { rafId = null; return; }
-    currentX += (0 - currentX) * 0.18;
-    currentY += (0 - currentY) * 0.18;
+    currentX *= 0.82;
+    currentY *= 0.82;
     if (Math.abs(currentX) < 0.05 && Math.abs(currentY) < 0.05) {
       currentX = 0; currentY = 0;
       card.style.transform = '';
@@ -212,17 +213,18 @@ document.querySelectorAll('.tilt-card').forEach(card => {
 
   card.addEventListener('mouseenter', () => {
     isOver = true;
+    /* Stop any ongoing reset immediately */
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
   });
 
   card.addEventListener('mousemove', (e) => {
-    const r = card.getBoundingClientRect();
-    if (e.clientX < r.left || e.clientX > r.right ||
-        e.clientY < r.top  || e.clientY > r.bottom) return;
+    /* Use currentTarget bounds so it's always untransformed layout rect */
+    const r  = e.currentTarget.getBoundingClientRect();
     const dx = (e.clientX - (r.left + r.width  / 2)) / (r.width  / 2);
     const dy = (e.clientY - (r.top  + r.height / 2)) / (r.height / 2);
-    currentX = -dy * MAX_TILT;
-    currentY =  dx * MAX_TILT;
+    /* Tilt TOWARD mouse: mouse right → right side forward (rotateY negative) */
+    currentX =  dy * MAX_TILT;
+    currentY = -dx * MAX_TILT;
     applyTransform(currentX, currentY);
   });
 
