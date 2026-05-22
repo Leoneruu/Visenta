@@ -180,59 +180,73 @@ window.addEventListener('scroll', () => {
 
 /* ============================
    3D TILT
+   Card lifts toward viewer (translateZ) + subtle tilt toward mouse.
+   MAX_TILT kept low so the far edge stays net-positive in Z.
+   Single RAF loop lerps all three values every frame.
    ============================ */
-const MAX_TILT = 12;
+const MAX_TILT = 5;   // degrees – subtle tilt
+const MAX_Z    = 22;  // px forward lift
+const LERP     = 0.4; // fast enough to feel instant, smooth enough not to snap
 
 document.querySelectorAll('.tilt-card').forEach(card => {
-  let rafId   = null;
-  let currentX = 0, currentY = 0;
-  let isOver   = false;
+  let targetX = 0, targetY = 0, targetZ = 0;
+  let currentX = 0, currentY = 0, currentZ = 0;
+  let rafId = null;
 
-  card.style.willChange    = 'transform';
+  card.style.willChange      = 'transform';
   card.style.transformOrigin = 'center center';
 
-  function applyTransform(rx, ry) {
+  function applyTransform() {
     card.style.transform =
-      `perspective(900px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+      `perspective(900px) translateZ(${currentZ.toFixed(2)}px) ` +
+      `rotateX(${currentX.toFixed(3)}deg) rotateY(${currentY.toFixed(3)}deg)`;
   }
 
-  /* Smooth reset back to flat on mouseleave */
-  function resetTick() {
-    if (isOver) { rafId = null; return; }
-    currentX *= 0.82;
-    currentY *= 0.82;
-    if (Math.abs(currentX) < 0.05 && Math.abs(currentY) < 0.05) {
-      currentX = 0; currentY = 0;
-      card.style.transform = '';
+  function tick() {
+    currentX += (targetX - currentX) * LERP;
+    currentY += (targetY - currentY) * LERP;
+    currentZ += (targetZ - currentZ) * LERP;
+
+    const done =
+      Math.abs(targetX - currentX) < 0.01 &&
+      Math.abs(targetY - currentY) < 0.01 &&
+      Math.abs(targetZ - currentZ) < 0.05;
+
+    if (done) {
+      currentX = targetX; currentY = targetY; currentZ = targetZ;
+      if (targetZ === 0) { card.style.transform = ''; }
+      else               { applyTransform(); }
       rafId = null;
       return;
     }
-    applyTransform(currentX, currentY);
-    rafId = requestAnimationFrame(resetTick);
+
+    applyTransform();
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function ensureTick() {
+    if (!rafId) rafId = requestAnimationFrame(tick);
   }
 
   card.addEventListener('mouseenter', () => {
-    isOver = true;
-    /* Stop any ongoing reset immediately */
-    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    targetZ = MAX_Z;
+    ensureTick();
   });
 
   card.addEventListener('mousemove', (e) => {
-    /* Use currentTarget bounds so it's always untransformed layout rect */
     const r  = e.currentTarget.getBoundingClientRect();
     const dx = (e.clientX - (r.left + r.width  / 2)) / (r.width  / 2);
     const dy = (e.clientY - (r.top  + r.height / 2)) / (r.height / 2);
-    /* Tilt TOWARD mouse: mouse right → right side forward (rotateY negative) */
-    currentX =  dy * MAX_TILT;
-    currentY = -dx * MAX_TILT;
-    applyTransform(currentX, currentY);
+    targetX =  dy * MAX_TILT;  // mouse up   → top forward
+    targetY = -dx * MAX_TILT;  // mouse right → right forward
+    targetZ = MAX_Z;
+    ensureTick();
   });
 
   card.addEventListener('mouseleave', (e) => {
     if (e.relatedTarget && card.contains(e.relatedTarget)) return;
-    isOver = false;
-    if (rafId) cancelAnimationFrame(rafId);
-    rafId = requestAnimationFrame(resetTick);
+    targetX = 0; targetY = 0; targetZ = 0;
+    ensureTick();
   });
 });
 
