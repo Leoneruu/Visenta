@@ -214,9 +214,10 @@ button { font-family: inherit; }
   right: 0;
   z-index: 100;
   height: 73px;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  justify-content: space-between;
+  gap: 2rem;
   padding: 0 2rem;
   background: rgba(0,0,0,0.45);
   backdrop-filter: blur(20px);
@@ -1056,6 +1057,7 @@ button { font-family: inherit; }
    NAV MENU
    ============================ */
 .nav-menu {
+  justify-self: center;
   display: flex;
   gap: 2rem;
   list-style: none;
@@ -1081,52 +1083,41 @@ button { font-family: inherit; }
 }
 
 /* ============================
-   LEISTUNGEN
+   SECTION GRIDS – unified spec
+   1200px max, 24px gap, centered
    ============================ */
-.services-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  max-width: 1100px;
+.services-grid,
+.why-grid,
+.testimonials-grid,
+.process-grid {
+  display: grid;
+  gap: 24px;
+  max-width: 1200px;
   margin: 0 auto;
+  width: 100%;
 }
 
-.service-card .card-inner { gap: 1.4rem; }
+.services-grid     { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.why-grid          { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.testimonials-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.process-grid      { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
-.service-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 14px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.18);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-}
-
-.service-icon svg { width: 28px; height: 28px; }
+/* override the 360px min-height from .cards-grid .glass-card */
+.cards-grid.services-grid     .glass-card,
+.cards-grid.why-grid          .glass-card,
+.cards-grid.testimonials-grid .glass-card { min-height: auto; }
 
 /* ============================
-   WARUM VISENTA
+   LEISTUNGEN – icon top, title, text
    ============================ */
-.why-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  max-width: 900px;
-  margin: 0 auto;
-}
-
-.cards-grid.why-grid .glass-card { min-height: 160px; }
-
-.why-inner {
-  flex-direction: row;
-  align-items: flex-start;
+.service-card .card-inner {
   gap: 1.2rem;
-  padding: 1.8rem;
+  padding: 2rem;
 }
 
-.why-icon {
-  flex-shrink: 0;
-  width: 44px;
-  height: 44px;
+.service-icon {
+  width: 48px;
+  height: 48px;
   border-radius: 12px;
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.18);
@@ -1136,12 +1127,37 @@ button { font-family: inherit; }
   color: #fff;
 }
 
-.why-icon svg { width: 22px; height: 22px; }
+.service-icon svg { width: 24px; height: 24px; }
 
-.why-text { flex: 1; }
+/* ============================
+   WARUM VISENTA – compact, icon + text row
+   ============================ */
+.why-inner {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+.why-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.why-icon svg { width: 20px; height: 20px; }
+
+.why-text { flex: 1; min-width: 0; }
 
 .why-title {
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 700;
   letter-spacing: -0.01em;
   margin-bottom: 0.3rem;
@@ -1154,17 +1170,12 @@ button { font-family: inherit; }
 }
 
 /* ============================
-   PROZESS
+   PROZESS – numbered cards, no list defaults
    ============================ */
 .process-grid {
   list-style: none;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1.5rem;
-  position: relative;
-  max-width: 1100px;
-  margin: 0 auto;
   padding: 0;
+  position: relative;
 }
 
 /* connecting line between circles */
@@ -1183,6 +1194,7 @@ button { font-family: inherit; }
     transparent 100%
   );
   z-index: 0;
+  pointer-events: none;
 }
 
 .process-step {
@@ -1192,6 +1204,7 @@ button { font-family: inherit; }
   text-align: center;
   position: relative;
   z-index: 1;
+  padding: 0 0.5rem;
 }
 
 .process-circle {
@@ -1206,11 +1219,11 @@ button { font-family: inherit; }
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 1.3rem;
+  margin-bottom: 1.2rem;
 }
 
 .process-circle span {
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   color: #fff;
@@ -1227,19 +1240,16 @@ button { font-family: inherit; }
   font-size: 0.88rem;
   color: rgba(255,255,255,0.65);
   line-height: 1.5;
-  max-width: 200px;
+  max-width: 220px;
 }
 
 /* ============================
-   TESTIMONIALS
+   TESTIMONIALS – stars, quote, meta
    ============================ */
-.testimonials-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  max-width: 1100px;
-  margin: 0 auto;
+.testimonial-inner {
+  gap: 1rem;
+  padding: 2rem;
 }
-
-.testimonial-inner { gap: 1rem; }
 
 .testimonial-stars {
   color: #f5c542;
@@ -1256,7 +1266,7 @@ button { font-family: inherit; }
 
 .testimonial-meta {
   margin-top: auto;
-  padding-top: 0.5rem;
+  padding-top: 0.8rem;
   border-top: 1px solid rgba(255,255,255,0.08);
 }
 
@@ -1283,11 +1293,16 @@ button { font-family: inherit; }
 
 @media (max-width: 900px) {
   .projects-grid { grid-template-columns: 1fr; max-width: 480px; }
-  .team-grid { grid-template-columns: 1fr; max-width: 480px; }
-  .services-grid { grid-template-columns: 1fr; max-width: 480px; }
-  .why-grid { grid-template-columns: 1fr; max-width: 480px; }
-  .testimonials-grid { grid-template-columns: 1fr; max-width: 480px; }
-  .process-grid { grid-template-columns: repeat(2, 1fr); gap: 2.5rem 1.5rem; max-width: 480px; }
+  .team-grid    { grid-template-columns: 1fr; max-width: 480px; }
+}
+
+@media (max-width: 768px) {
+  .navbar { grid-template-columns: auto auto; gap: 1rem; }
+  .nav-menu { display: none; }
+  .services-grid,
+  .why-grid,
+  .testimonials-grid,
+  .process-grid { grid-template-columns: 1fr; max-width: 480px; }
   .process-grid::before { display: none; }
 }
 
@@ -1295,8 +1310,6 @@ button { font-family: inherit; }
   .navbar { padding: 0 1.2rem; }
   .btn-nav { font-size: 0.75rem; padding: 0.45rem 0.9rem; }
   .nav-wordmark { display: none; }
-  .nav-menu { display: none; }
-  .process-grid { grid-template-columns: 1fr; }
 
   .about-stats { gap: 1.5rem; }
 
