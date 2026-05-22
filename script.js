@@ -192,6 +192,7 @@ document.querySelectorAll('.tilt-card').forEach(card => {
   let targetX = 0, targetY = 0, targetZ = 0;
   let currentX = 0, currentY = 0, currentZ = 0;
   let rafId = null;
+  let flatRect = null; // card bounds captured while still flat (no transform)
 
   card.style.willChange      = 'transform';
   card.style.transformOrigin = 'center center';
@@ -229,12 +230,17 @@ document.querySelectorAll('.tilt-card').forEach(card => {
   }
 
   card.addEventListener('mouseenter', () => {
+    // Capture the untransformed layout rect now, while card is still flat.
+    // getBoundingClientRect() during active tilt returns the visually projected
+    // rect (slightly enlarged/shifted by translateZ + perspective), which would
+    // make dx/dy smaller for cards farther from the viewport centre.
+    flatRect = card.getBoundingClientRect();
     targetZ = MAX_Z;
     ensureTick();
   });
 
   card.addEventListener('mousemove', (e) => {
-    const r  = e.currentTarget.getBoundingClientRect();
+    const r  = flatRect;
     const dx = (e.clientX - (r.left + r.width  / 2)) / (r.width  / 2);
     const dy = (e.clientY - (r.top  + r.height / 2)) / (r.height / 2);
     targetX =  dy * MAX_TILT;  // mouse up   → top forward
@@ -245,6 +251,7 @@ document.querySelectorAll('.tilt-card').forEach(card => {
 
   card.addEventListener('mouseleave', (e) => {
     if (e.relatedTarget && card.contains(e.relatedTarget)) return;
+    flatRect = null;
     targetX = 0; targetY = 0; targetZ = 0;
     ensureTick();
   });
