@@ -1053,17 +1053,250 @@ button { font-family: inherit; }
 .summary-list li span:last-child { font-weight: 500; text-align: right; }
 
 /* ============================
+   NAV MENU
+   ============================ */
+.nav-menu {
+  display: flex;
+  gap: 2rem;
+  list-style: none;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-menu a {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.75);
+  letter-spacing: 0.02em;
+  transition: color 0.2s;
+}
+
+.nav-menu a:hover { color: #fff; }
+
+.nav-menu a.nav-disabled {
+  color: rgba(255,255,255,0.35);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ============================
+   LEISTUNGEN
+   ============================ */
+.services-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.service-card .card-inner { gap: 1.4rem; }
+
+.service-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.service-icon svg { width: 28px; height: 28px; }
+
+/* ============================
+   WARUM VISENTA
+   ============================ */
+.why-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.cards-grid.why-grid .glass-card { min-height: 160px; }
+
+.why-inner {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 1.2rem;
+  padding: 1.8rem;
+}
+
+.why-icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.why-icon svg { width: 22px; height: 22px; }
+
+.why-text { flex: 1; }
+
+.why-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.3rem;
+}
+
+.why-desc {
+  font-size: 0.88rem;
+  color: rgba(255,255,255,0.65);
+  line-height: 1.5;
+}
+
+/* ============================
+   PROZESS
+   ============================ */
+.process-grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  position: relative;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+/* connecting line between circles */
+.process-grid::before {
+  content: '';
+  position: absolute;
+  top: 36px;
+  left: 12.5%;
+  right: 12.5%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255,255,255,0.25) 20%,
+    rgba(255,255,255,0.25) 80%,
+    transparent 100%
+  );
+  z-index: 0;
+}
+
+.process-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.process-circle {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.3);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.3rem;
+}
+
+.process-circle span {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #fff;
+}
+
+.process-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.4rem;
+}
+
+.process-desc {
+  font-size: 0.88rem;
+  color: rgba(255,255,255,0.65);
+  line-height: 1.5;
+  max-width: 200px;
+}
+
+/* ============================
+   TESTIMONIALS
+   ============================ */
+.testimonials-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.testimonial-inner { gap: 1rem; }
+
+.testimonial-stars {
+  color: #f5c542;
+  font-size: 1rem;
+  letter-spacing: 0.18em;
+}
+
+.testimonial-quote {
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: rgba(255,255,255,0.85);
+  flex: 1;
+}
+
+.testimonial-meta {
+  margin-top: auto;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.testimonial-meta strong {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 0.15rem;
+}
+
+.testimonial-meta span {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.5);
+}
+
+/* ============================
    RESPONSIVE
    ============================ */
+@media (max-width: 1024px) {
+  .nav-menu { gap: 1.2rem; }
+  .nav-menu a { font-size: 0.82rem; }
+}
+
 @media (max-width: 900px) {
   .projects-grid { grid-template-columns: 1fr; max-width: 480px; }
   .team-grid { grid-template-columns: 1fr; max-width: 480px; }
+  .services-grid { grid-template-columns: 1fr; max-width: 480px; }
+  .why-grid { grid-template-columns: 1fr; max-width: 480px; }
+  .testimonials-grid { grid-template-columns: 1fr; max-width: 480px; }
+  .process-grid { grid-template-columns: repeat(2, 1fr); gap: 2.5rem 1.5rem; max-width: 480px; }
+  .process-grid::before { display: none; }
 }
 
 @media (max-width: 640px) {
   .navbar { padding: 0 1.2rem; }
   .btn-nav { font-size: 0.75rem; padding: 0.45rem 0.9rem; }
   .nav-wordmark { display: none; }
+  .nav-menu { display: none; }
+  .process-grid { grid-template-columns: 1fr; }
 
   .about-stats { gap: 1.5rem; }
 

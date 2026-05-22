@@ -32,6 +32,12 @@
       <img src="Neues Logo.png" alt="Visenta Logo" class="nav-logo" />
       <img src="Schriftzug.png" alt="Visenta" class="nav-wordmark" />
     </a>
+    <ul class="nav-menu">
+      <li><a href="#leistungen">Leistungen</a></li>
+      <li><a href="#" class="nav-disabled" aria-disabled="true">Referenzen</a></li>
+      <li><a href="#" class="nav-disabled" aria-disabled="true">Über uns</a></li>
+      <li><a href="#contact">Kontakt</a></li>
+    </ul>
     <button type="button" class="btn btn-nav js-open-modal">Jetzt kostenlos beraten lassen</button>
   </nav>
 
@@ -53,72 +59,59 @@
     </div>
   </section>
 
-  <!-- REFERENZEN -->
-  <section class="section" id="referenzen">
+  <!-- LEISTUNGEN -->
+  <section class="section" id="leistungen">
     <div class="container">
       <div class="section-header">
-        <p class="section-label">Unsere Arbeit</p>
-        <h2 class="section-title">Ausgewählte Projekte</h2>
-        <p class="section-sub">Jedes Projekt ist ein Unikat – maßgeschneidert für die Vision unserer Kunden.</p>
+        <p class="section-label">Was wir machen</p>
+        <h2 class="section-title">Leistungen</h2>
+        <p class="section-sub">Drei Bereiche, ein Anspruch: Premium-Qualität in allem, was wir tun.</p>
       </div>
-      <div class="cards-grid projects-grid">
+      <div class="cards-grid services-grid">
 
-        <article class="glass-card project-card tilt-card">
+        <article class="glass-card service-card tilt-card">
           <div class="card-inner">
-            <div class="card-tag">E-Commerce</div>
-            <div class="card-body">
-              <h3 class="card-title">Lumière Parfums</h3>
-              <p class="card-desc">Exklusiver Online-Shop für eine Luxus-Parfümerie. Fokus auf visuelles Storytelling, schnelle Ladezeiten und eine nahtlose Checkout-Experience.</p>
+            <div class="service-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2.5" y="3.5" width="19" height="15" rx="2"/>
+                <path d="M2.5 8h19"/>
+                <path d="M8 13l-2 2 2 2"/>
+                <path d="M14 13l2 2 -2 2"/>
+              </svg>
             </div>
-            <div class="card-footer">
-              <span class="card-tag-small">UX Design</span>
-              <span class="card-tag-small">Shopify</span>
-              <span class="card-tag-small">Animation</span>
+            <div class="card-body">
+              <h3 class="card-title">Webdesign &amp; Entwicklung</h3>
+              <p class="card-desc">Maßgeschneiderte Websites, die nicht nur gut aussehen, sondern auch verkaufen. Vom Design bis zur Performance-optimierten Umsetzung.</p>
             </div>
           </div>
         </article>
 
-        <article class="glass-card project-card tilt-card">
+        <article class="glass-card service-card tilt-card">
           <div class="card-inner">
-            <div class="card-tag">SaaS</div>
-            <div class="card-body">
-              <h3 class="card-title">Norda Analytics</h3>
-              <p class="card-desc">Marketing-Website und Dashboard-Onboarding für ein B2B-SaaS-Startup. Klare Conversion-Architektur und datengetriebenes UI-Design.</p>
+            <div class="service-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2.5l2.6 5.6 6.2.7-4.6 4.2 1.2 6.1L12 16.2l-5.4 2.9 1.2-6.1-4.6-4.2 6.2-.7z"/>
+              </svg>
             </div>
-            <div class="card-footer">
-              <span class="card-tag-small">Webflow</span>
-              <span class="card-tag-small">UI/UX</span>
-              <span class="card-tag-small">CRO</span>
+            <div class="card-body">
+              <h3 class="card-title">Branding &amp; Corporate Design</h3>
+              <p class="card-desc">Visuelle Identitäten, die in Erinnerung bleiben. Logo, Farbwelt, Typografie und Bildsprache – stimmig aus einem Guss.</p>
             </div>
           </div>
         </article>
 
-        <article class="glass-card project-card tilt-card">
+        <article class="glass-card service-card tilt-card">
           <div class="card-inner">
-            <div class="card-tag">Corporate</div>
+            <div class="service-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="6.5"/>
+                <path d="M16 16l5 5"/>
+                <path d="M8 11l2 2 4-4"/>
+              </svg>
+            </div>
             <div class="card-body">
-              <h3 class="card-title">Steinbach Immobilien</h3>
-              <p class="card-desc">Premium Corporate Website für ein Münchener Immobilienbüro. Hochwertige Bildsprache, interaktive Objekt-Karte und Lead-Generierungs-Funnel.</p>
-            </div>
-            <div class="card-footer">
-              <span class="card-tag-small">Custom Dev</span>
-              <span class="card-tag-small">SEO</span>
-              <span class="card-tag-small">Maps API</span>
-            </div>
-          </div>
-        </article>
-
-        <article class="glass-card project-card tilt-card">
-          <div class="card-inner">
-            <div class="card-tag">Branding &amp; Web</div>
-            <div class="card-body">
-              <h3 class="card-title">Aelius Coffee</h3>
-              <p class="card-desc">Komplettes Markenrelaunch inkl. neuer Website für eine Berliner Specialty-Coffee-Rösterei. Vom Logo bis zur vollständigen digitalen Identität.</p>
-            </div>
-            <div class="card-footer">
-              <span class="card-tag-small">Branding</span>
-              <span class="card-tag-small">Motion</span>
-              <span class="card-tag-small">WordPress</span>
+              <h3 class="card-title">SEO &amp; Performance</h3>
+              <p class="card-desc">Gefunden werden und schnell laden. Technisches SEO, Core Web Vitals und Conversion-Optimierung – damit deine Website Ergebnisse liefert.</p>
             </div>
           </div>
         </article>
@@ -127,56 +120,161 @@
     </div>
   </section>
 
-  <!-- ÜBER UNS / TEAM -->
-  <section class="section section-dark" id="ueber-uns">
+  <!-- WARUM VISENTA -->
+  <section class="section section-dark" id="warum">
     <div class="container">
-      <div class="about-layout">
-        <div class="about-text">
-          <p class="section-label">Wer wir sind</p>
-          <h2 class="section-title">Design trifft Strategie.</h2>
-          <p class="about-desc">
-            Visenta ist eine unabhängige Webdesign-Agentur aus Hamburg. Wir glauben daran, dass gutes Design mehr ist als Ästhetik – es ist das stärkste Werkzeug für Wachstum.
-          </p>
-          <p class="about-desc">
-            Seit 2019 helfen wir Unternehmen dabei, ihre digitale Präsenz in einen echten Wettbewerbsvorteil zu verwandeln. Kein Baukastensystem. Keine Kompromisse. Nur Arbeit, auf die wir stolz sind.
-          </p>
-          <ul class="about-stats">
-            <li><strong>85+</strong><span>Projekte</span></li>
-            <li><strong>97%</strong><span>Weiterempfehlung</span></li>
-            <li><strong>6</strong><span>Jahre Erfahrung</span></li>
-          </ul>
-        </div>
+      <div class="section-header">
+        <p class="section-label">Warum Visenta</p>
+        <h2 class="section-title">Was uns besonders macht</h2>
+        <p class="section-sub">Vier Versprechen, die wir bei jedem Projekt einlösen.</p>
       </div>
+      <div class="cards-grid why-grid">
 
-      <div class="cards-grid team-grid">
-
-        <article class="glass-card team-card tilt-card">
-          <div class="card-inner team-inner">
-            <img class="team-avatar" alt="Lena Maurer Memoji"
-              src="https://api.dicebear.com/7.x/avataaars/svg?seed=Lena&radius=50&backgroundType=gradientLinear&backgroundColor=b6e3f4,c0aede&mouth=smile&eyes=happy&eyebrows=raisedExcitedNatural&top[]=longButNotTooLong&facialHairProbability=0" />
-            <h3 class="team-name">Lena Maurer</h3>
-            <p class="team-role">Creative Director</p>
-            <p class="team-bio">Brand Identity und visuelle Konzeption – Lena sorgt dafür, dass jedes Projekt eine unverwechselbare Handschrift bekommt.</p>
+        <article class="glass-card why-card tilt-card">
+          <div class="card-inner why-inner">
+            <div class="why-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 4h7v7H4z"/>
+                <path d="M13 4h7v7h-7z"/>
+                <path d="M4 13h7v7H4z"/>
+                <path d="M16 14l4 4M20 14l-4 4"/>
+              </svg>
+            </div>
+            <div class="why-text">
+              <h3 class="why-title">Keine Baukastensysteme</h3>
+              <p class="why-desc">Alles wird von Grund auf neu entwickelt – kein Theme, keine Templates.</p>
+            </div>
           </div>
         </article>
 
-        <article class="glass-card team-card tilt-card">
-          <div class="card-inner team-inner">
-            <img class="team-avatar" alt="Felix Kramer Memoji"
-              src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&radius=50&backgroundType=gradientLinear&backgroundColor=ffd5dc,ffdfbf&mouth=twinkle&eyes=happy&eyebrows=raisedExcitedNatural&top[]=shortFlat&facialHairType[]=beardLight&facialHairProbability=100" />
-            <h3 class="team-name">Felix Kramer</h3>
-            <p class="team-role">Lead Developer</p>
-            <p class="team-bio">Fullstack mit Leidenschaft für Performance – Felix baut Websites, die so schnell sind wie sie aussehen.</p>
+        <article class="glass-card why-card tilt-card">
+          <div class="card-inner why-inner">
+            <div class="why-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20.5 11.5L12.5 3.5H4v8.5l8 8z"/>
+                <circle cx="8" cy="8" r="1.4"/>
+              </svg>
+            </div>
+            <div class="why-text">
+              <h3 class="why-title">Festpreis</h3>
+              <p class="why-desc">Keine versteckten Kosten, klare Absprachen – du weißt vorher, was du bekommst.</p>
+            </div>
           </div>
         </article>
 
-        <article class="glass-card team-card tilt-card">
-          <div class="card-inner team-inner">
-            <img class="team-avatar" alt="Sara Riedel Memoji"
-              src="https://api.dicebear.com/7.x/avataaars/svg?seed=Sara&radius=50&backgroundType=gradientLinear&backgroundColor=d1d4f9,c0aede&mouth=smile&eyes=happy&eyebrows=raisedExcitedNatural&top[]=curvy&facialHairProbability=0" />
-            <h3 class="team-name">Sara Riedel</h3>
-            <p class="team-role">UX Strategin</p>
-            <p class="team-bio">Verbindet Nutzerforschung mit Conversion-Psychologie – jeder Klick hat Absicht und Ergebnis.</p>
+        <article class="glass-card why-card tilt-card">
+          <div class="card-inner why-inner">
+            <div class="why-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12.5" r="8.5"/>
+                <path d="M12 8v5l3 2"/>
+              </svg>
+            </div>
+            <div class="why-text">
+              <h3 class="why-title">Fertig in 2 Wochen</h3>
+              <p class="why-desc">Schnelle Umsetzung ohne Qualitätsverlust – fokussierte Sprints statt endloser Projekte.</p>
+            </div>
+          </div>
+        </article>
+
+        <article class="glass-card why-card tilt-card">
+          <div class="card-inner why-inner">
+            <div class="why-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2.5L3 7.5v9L12 21.5l9-5v-9z"/>
+                <path d="M3 7.5l9 5 9-5"/>
+                <path d="M12 12.5v9"/>
+              </svg>
+            </div>
+            <div class="why-text">
+              <h3 class="why-title">100 % maßgeschneidert</h3>
+              <p class="why-desc">Jedes Projekt ist ein Unikat – auf deine Marke und deine Ziele zugeschnitten.</p>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- PROZESS -->
+  <section class="section" id="prozess">
+    <div class="container">
+      <div class="section-header">
+        <p class="section-label">Ablauf</p>
+        <h2 class="section-title">So arbeiten wir</h2>
+        <p class="section-sub">Ein klarer Prozess in vier Schritten – transparent, effizient und planbar.</p>
+      </div>
+      <ol class="process-grid">
+
+        <li class="process-step">
+          <div class="process-circle"><span>01</span></div>
+          <h3 class="process-title">Erstgespräch</h3>
+          <p class="process-desc">Wir lernen dein Projekt kennen.</p>
+        </li>
+
+        <li class="process-step">
+          <div class="process-circle"><span>02</span></div>
+          <h3 class="process-title">Konzept &amp; Design</h3>
+          <p class="process-desc">Wir entwickeln deine visuelle Identität.</p>
+        </li>
+
+        <li class="process-step">
+          <div class="process-circle"><span>03</span></div>
+          <h3 class="process-title">Entwicklung</h3>
+          <p class="process-desc">Wir bauen deine Website.</p>
+        </li>
+
+        <li class="process-step">
+          <div class="process-circle"><span>04</span></div>
+          <h3 class="process-title">Launch</h3>
+          <p class="process-desc">Wir bringen dich online.</p>
+        </li>
+
+      </ol>
+    </div>
+  </section>
+
+  <!-- TESTIMONIALS -->
+  <section class="section section-dark" id="testimonials">
+    <div class="container">
+      <div class="section-header">
+        <p class="section-label">Kundenstimmen</p>
+        <h2 class="section-title">Was unsere Kunden sagen</h2>
+        <p class="section-sub">Echtes Feedback aus echten Projekten.</p>
+      </div>
+      <div class="cards-grid testimonials-grid">
+
+        <article class="glass-card testimonial-card tilt-card">
+          <div class="card-inner testimonial-inner">
+            <div class="testimonial-stars" aria-label="5 von 5 Sternen">★★★★★</div>
+            <p class="testimonial-quote">„Das Team von Visenta hat unsere Vision perfekt eingefangen. Schnell, professionell und mit einem Auge für jedes Detail – das Ergebnis hat unsere Erwartungen weit übertroffen."</p>
+            <div class="testimonial-meta">
+              <strong>Anna Becker</strong>
+              <span>Geschäftsführerin, Lumière Parfums</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="glass-card testimonial-card tilt-card">
+          <div class="card-inner testimonial-inner">
+            <div class="testimonial-stars" aria-label="5 von 5 Sternen">★★★★★</div>
+            <p class="testimonial-quote">„Endlich eine Agentur, die nicht nur gut aussehende Websites baut, sondern auch versteht, was Conversion bedeutet. Unsere Lead-Zahlen haben sich verdoppelt."</p>
+            <div class="testimonial-meta">
+              <strong>Markus Steinbach</strong>
+              <span>Inhaber, Steinbach Immobilien</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="glass-card testimonial-card tilt-card">
+          <div class="card-inner testimonial-inner">
+            <div class="testimonial-stars" aria-label="5 von 5 Sternen">★★★★★</div>
+            <p class="testimonial-quote">„Festpreis, klare Kommunikation, pünktlicher Launch. Visenta liefert genau, was versprochen wird – und mehr. Eine absolute Empfehlung."</p>
+            <div class="testimonial-meta">
+              <strong>Julia Hartmann</strong>
+              <span>Marketing Lead, Norda Analytics</span>
+            </div>
           </div>
         </article>
 
