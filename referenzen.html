@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Referenzen – Visenta</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css?v=2" />
+  <style>
+    /* ── Referenzen-page loading screen (bar + pct only, no canvas) ── */
+    #loading-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      opacity: 1;
+      transition: opacity 0.6s ease;
+    }
+    #loading-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .ref-bar-wrap {
+      width: 280px;
+      height: 2px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .ref-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: #fff;
+      border-radius: 2px;
+      transition: width 0.1s linear;
+    }
+    .ref-pct {
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      color: rgba(255,255,255,0.7);
+    }
+
+    /* ── Project grid: 3-col, wider cards ── */
+    .projects-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    @media (max-width: 900px) {
+      .projects-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 700px; }
+    }
+    @media (max-width: 600px) {
+      .projects-grid { grid-template-columns: 1fr; max-width: 480px; }
+    }
+
+    /* ── Hero for subpage: less tall than full 100vh ── */
+    .ref-hero {
+      padding: 160px 0 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .ref-hero-inner {
+      max-width: 700px;
+      padding: 0 2rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LOADING SCREEN -->
+  <div id="loading-screen" aria-hidden="true">
+    <div class="ref-bar-wrap">
+      <div class="ref-bar-fill" id="ref-bar-fill"></div>
+    </div>
+    <p class="ref-pct" id="ref-pct">0%</p>
+  </div>
+
+  <!-- GLOBAL FIXED BACKGROUND CANVAS (frame sequence) -->
+  <div class="bg-video-wrapper">
+    <canvas id="bg-canvas"></canvas>
+    <div class="bg-video-overlay"></div>
+  </div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="navbar">
+    <a href="index.html" class="nav-brand">
+      <img src="Neues Logo.png" alt="Visenta Logo" class="nav-logo" />
+      <img src="Schriftzug.png" alt="Visenta" class="nav-wordmark" />
+    </a>
+    <ul class="nav-menu">
+      <li><a href="index.html#leistungen">Leistungen</a></li>
+      <li><a href="referenzen.html" style="color:#fff;">Referenzen</a></li>
+      <li><a href="#" class="nav-disabled" aria-disabled="true">Über uns</a></li>
+      <li><a href="index.html#contact">Kontakt</a></li>
+    </ul>
+    <a href="index.html#contact" class="btn btn-nav">Jetzt kostenlos beraten lassen</a>
+  </nav>
+
+  <!-- HERO -->
+  <div class="ref-hero">
+    <div class="ref-hero-inner">
+      <p class="hero-eyebrow">Unsere Arbeit</p>
+      <h1 class="hero-headline" style="font-size: clamp(2.5rem, 5vw, 4rem);">
+        Ausgewählte<br />Projekte
+      </h1>
+      <p class="hero-tagline">
+        Jedes Projekt ist ein Unikat – maßgeschneidert, schnell umgesetzt und mit messbarem Ergebnis.
+      </p>
+    </div>
+  </div>
+
+  <!-- REFERENZEN GRID -->
+  <section class="section" id="referenzen">
+    <div class="container">
+      <div class="section-header">
+        <p class="section-label">Portfolio</p>
+        <h2 class="section-title">Was wir gebaut haben</h2>
+        <p class="section-sub">Sechs Projekte aus unterschiedlichen Branchen – alle mit einem gemeinsamen Anspruch: Exzellenz.</p>
+      </div>
+
+      <div class="cards-grid projects-grid">
+
+        <article class="glass-card project-card tilt-card">
+          <div class="card-inner">
+            <div class="card-tag">E-Commerce</div>
+            <div class="card-body">
+              <h3 class="card-title">Lumière Parfums</h3>
+              <p class="card-desc">Exklusiver Online-Shop für eine Luxus-Parfümerie. Visuelles Storytelling, blitzschnelle Ladezeiten und eine nahtlose Checkout-Experience – Conversion-Rate +38 %.</p>
+            </div>
+            <div class="card-footer">
+              <span class="card-tag-small">UX Design</span>
+              <span class="card-tag-small">Shopify</span>
+              <span class="card-tag-small">Animation</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="glass-card project-card tilt-card">
+          <div class="card-inner">
+            <div class="card-tag">SaaS</div>
+            <div class="card-body">
+              <h3 class="card-title">Norda Analytics</h3>
+              <p class="card-desc">Marketing-Website und Dashboard-Onboarding für ein B2B-SaaS-Startup. Klare Conversion-Architektur, datengetriebenes UI – Trial-Signup-Rate verdoppelt.</p>
+            </div>
+            <div class="card-footer">
+              <span class="card-tag-small">Webflow</span>
+              <span class="card-tag-small">UI/UX</span>
+              <span class="card-tag-small">CRO</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="glass-card project-card tilt-card">
+          <div class="card-inner">
+            <div class="card-tag">Corporate</div>
+            <div class="card-body">
+              <h3 class="card-title">Steinbach Immobilien</h3>
+              <p class="card-desc">Premium Corporate Website für ein Münchener Immobilienbüro. Interaktive Objekt-Karte, Lead-Funnel und hochwertige Bildsprache – Anfragen +52 %.</p>
+            </div>
+            <div class="card-footer">
+              <span class="card-tag-small">Custom Dev</span>
+              <span class="card-tag-small">SEO</span>
+              <span class="card-tag-small">Maps API</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="glass-card project-card tilt-card">
+          <div class="card-inner">
+            <div class="card-tag">Branding &amp; Web</div>
+            <div class="card-body">
+              <h3 class="card-title">Aelius Coffee</h3>
+              <p class="card-desc">Komplettes Markenrelaunch für eine Berliner Specialty-Coffee-Rösterei. Vom Logo bis zur digitalen Identität – heute eine der meistzitierten deutschen Coffee-Brands online.</p>
+            </div>
+            <div class="card-footer">
+              <span class="card-tag-small">Branding</span>
+              <span class="card-tag-small">Motion</span>
+              <span class="card-tag-small">WordPress</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="glass-card project-card tilt-card">
+          <div class="card-inner">
+            <div class="card-tag">Health &amp; Wellness</div>
+            <div class="card-body">
+              <h3 class="card-title">Klinik Sonnenhang</h3>
+              <p class="card-desc">Kompletter Webauftritt für eine private Fachklinik. Vertrauensbildende Bildsprache, DSGVO-konformes Buchungssystem und barrierefreies Design.</p>
+            </div>
+            <div class="card-footer">
+              <span class="card-tag-small">Custom Dev</span>
+              <span class="card-tag-small">Booking</span>
+              <span class="card-tag-small">Accessibility</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="glass-card project-card tilt-card">
+          <div class="card-inner">
+            <div class="card-tag">Startup</div>
+            <div class="card-body">
+              <h3 class="card-title">Veltro Mobility</h3>
+              <p class="card-desc">Launch-Website für ein Berliner Mobility-Startup. Investor-Ready Pitch-Design, Waitlist-Funnel und Performance-optimierte Animationen – 4.200 Signups in 3 Wochen.</p>
+            </div>
+            <div class="card-footer">
+              <span class="card-tag-small">React</span>
+              <span class="card-tag-small">Animation</span>
+              <span class="card-tag-small">Launch</span>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA SECTION -->
+  <section class="footer-cta" id="contact">
+    <div class="container footer-cta-inner">
+      <p class="footer-cta-label">Dein Projekt fehlt noch</p>
+      <h2 class="footer-cta-title">Bereit für dein<br />nächstes Projekt?</h2>
+      <p class="footer-cta-sub">Erzähl uns von deiner Idee – die Erstberatung ist kostenlos und unverbindlich.</p>
+      <a href="index.html#contact" class="btn btn-footer">Jetzt kostenlos beraten lassen</a>
+    </div>
+
+    <footer class="footer">
+      <div class="container footer-inner">
+        <div class="footer-brand">
+          <img src="Schriftzug.png" alt="Visenta" class="nav-wordmark" />
+        </div>
+        <div class="footer-legal">
+          <p class="footer-copy">&copy; 2026 Visenta. Alle Rechte vorbehalten.</p>
+          <a href="mailto:kontakt@visenta.de">Kontakt</a>
+          <a href="impressum.html">Impressum</a>
+          <a href="datenschutz.html">Datenschutz</a>
+        </div>
+      </div>
+    </footer>
+  </section>
+
+  <script src="referenzen.js"></script>
+</body>
+</html>
