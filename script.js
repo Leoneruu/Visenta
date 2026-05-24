@@ -171,14 +171,27 @@ scrollEl.addEventListener('scroll', () => {
 
   /* ── Scroll driver ──────────────────────────────────────────────────── */
   function startScrollDriver() {
+    let targetFrame  = 0;
+    let currentFrame = 0;
+    let rafId = null;
+
     scrollEl.addEventListener('scroll', () => {
       const maxScroll = Math.max(scrollEl.scrollHeight - fixedHeight, 1);
-      const idx = Math.min(
-        Math.round((scrollEl.scrollTop / maxScroll) * (BG_TOTAL - 1)),
-        BG_TOTAL - 1
-      );
-      if (idx !== bgLastIdx) drawBg(idx);
+      targetFrame = (scrollEl.scrollTop / maxScroll) * (BG_TOTAL - 1);
+      if (!rafId) rafId = requestAnimationFrame(tick);
     }, { passive: true });
+
+    function tick() {
+      currentFrame += (targetFrame - currentFrame) * 0.05;
+      if (Math.abs(currentFrame - targetFrame) < 0.5) {
+        currentFrame = targetFrame;
+        rafId = null;
+      } else {
+        rafId = requestAnimationFrame(tick);
+      }
+      const idx = Math.min(Math.round(currentFrame), BG_TOTAL - 1);
+      if (idx !== bgLastIdx) drawBg(idx);
+    }
   }
 
 }());
