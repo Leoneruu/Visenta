@@ -100,7 +100,7 @@ window.addEventListener('scroll', () => {
     }, { passive: true });
 
     function tick() {
-      smoothFrac += (targetFrac - smoothFrac) * 0.12;
+      smoothFrac += (targetFrac - smoothFrac) * 0.08;
       const idx = Math.min(Math.round(smoothFrac * (TOTAL - 1)), TOTAL - 1);
       if (idx !== lastIdx) drawFrame(idx);
       requestAnimationFrame(tick);
