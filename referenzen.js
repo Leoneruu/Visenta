@@ -1,9 +1,10 @@
 /* ============================
    NAVBAR – scroll state
    ============================ */
-const navbar = document.getElementById('navbar');
-window.addEventListener('scroll', () => {
-  navbar.classList.toggle('scrolled', window.scrollY > 60);
+const navbar   = document.getElementById('navbar');
+const scrollEl = document.getElementById('scroll-container');
+scrollEl.addEventListener('scroll', () => {
+  navbar.classList.toggle('scrolled', scrollEl.scrollTop > 60);
 }, { passive: true });
 
 /* ============================
@@ -28,19 +29,25 @@ window.addEventListener('scroll', () => {
 
   function pad(n) { return String(n).padStart(3, '0'); }
 
-  const vvw = () => window.visualViewport?.width  ?? window.innerWidth;
-  const vvh = () => window.visualViewport?.height ?? window.innerHeight;
+  const fixedHeight = window.innerHeight;
+  let   lastWidth   = window.innerWidth;
 
   /* ── Canvas sizing (cover) ───────────────────────────────────────────── */
   let lastIdx = 0;
 
   function resizeBg() {
-    bgCanvas.width  = Math.round(vvw() * DPR);
-    bgCanvas.height = Math.round(vvh() * DPR);
+    bgCanvas.width  = Math.round(window.innerWidth * DPR);
+    bgCanvas.height = Math.round(fixedHeight * DPR);
   }
   resizeBg();
-  window.addEventListener('resize', () => { resizeBg(); drawFrame(lastIdx); }, { passive: true });
-  window.visualViewport?.addEventListener('resize', () => { resizeBg(); drawFrame(lastIdx); });
+  window.addEventListener('resize', () => {
+    const newWidth = window.innerWidth;
+    if (newWidth !== lastWidth) {
+      lastWidth = newWidth;
+      resizeBg();
+      drawFrame(lastIdx);
+    }
+  }, { passive: true });
 
   function drawFrame(idx) {
     const img = frames[idx];
@@ -95,9 +102,9 @@ window.addEventListener('scroll', () => {
     let smoothFrac = 0;
     let rafId = null;
 
-    window.addEventListener('scroll', () => {
-      const maxScroll = Math.max(document.body.scrollHeight - vvh(), 1);
-      targetFrac = window.scrollY / maxScroll;
+    scrollEl.addEventListener('scroll', () => {
+      const maxScroll = Math.max(scrollEl.scrollHeight - fixedHeight, 1);
+      targetFrac = scrollEl.scrollTop / maxScroll;
       if (!rafId) rafId = requestAnimationFrame(tick);
     }, { passive: true });
 

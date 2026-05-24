@@ -1,9 +1,10 @@
 /* ============================
    NAVBAR – scroll state
    ============================ */
-const navbar = document.getElementById('navbar');
-window.addEventListener('scroll', () => {
-  navbar.classList.toggle('scrolled', window.scrollY > 60);
+const navbar    = document.getElementById('navbar');
+const scrollEl  = document.getElementById('scroll-container');
+scrollEl.addEventListener('scroll', () => {
+  navbar.classList.toggle('scrolled', scrollEl.scrollTop > 60);
 }, { passive: true });
 
 /* ============================
@@ -45,19 +46,27 @@ window.addEventListener('scroll', () => {
 
   function pad(n) { return String(n).padStart(3, '0'); }
 
-  const vvw = () => window.visualViewport?.width  ?? window.innerWidth;
-  const vvh = () => window.visualViewport?.height ?? window.innerHeight;
+  /* Fixed at load – never changes on address-bar show/hide */
+  const fixedHeight = window.innerHeight;
+  let   lastWidth   = window.innerWidth;
 
   /* ── Background canvas sizing ───────────────────────────────────────── */
   let bgLastIdx = 0;
 
   function resizeBg() {
-    bgCanvas.width  = Math.round(vvw() * DPR);
-    bgCanvas.height = Math.round(vvh() * DPR);
+    bgCanvas.width  = Math.round(window.innerWidth * DPR);
+    bgCanvas.height = Math.round(fixedHeight * DPR);
   }
   resizeBg();
-  window.addEventListener('resize', () => { resizeBg(); drawBg(bgLastIdx); }, { passive: true });
-  window.visualViewport?.addEventListener('resize', () => { resizeBg(); drawBg(bgLastIdx); });
+  /* Only redraw on genuine width changes (e.g. orientation, desktop resize) */
+  window.addEventListener('resize', () => {
+    const newWidth = window.innerWidth;
+    if (newWidth !== lastWidth) {
+      lastWidth = newWidth;
+      resizeBg();
+      drawBg(bgLastIdx);
+    }
+  }, { passive: true });
 
   /* Cover-fit draw onto background canvas */
   function drawBg(idx) {
@@ -80,8 +89,8 @@ window.addEventListener('scroll', () => {
 
     /* Size canvas once using 1/3-of-viewport bounds (3× smaller than full) */
     if (!ldrSized) {
-      const maxW  = Math.round(vvw() * 0.15);
-      const maxH  = Math.round(vvh() * 0.12);
+      const maxW  = Math.round(window.innerWidth * 0.15);
+      const maxH  = Math.round(fixedHeight * 0.12);
       const scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1);
       ldrCanvas.width  = Math.round(img.naturalWidth  * scale);
       ldrCanvas.height = Math.round(img.naturalHeight * scale);
@@ -166,9 +175,9 @@ window.addEventListener('scroll', () => {
     let smoothFrac = 0;
     let rafId = null;
 
-    window.addEventListener('scroll', () => {
-      const maxScroll = Math.max(document.body.scrollHeight - vvh(), 1);
-      targetFrac = window.scrollY / maxScroll;
+    scrollEl.addEventListener('scroll', () => {
+      const maxScroll = Math.max(scrollEl.scrollHeight - fixedHeight, 1);
+      targetFrac = scrollEl.scrollTop / maxScroll;
       if (!rafId) rafId = requestAnimationFrame(tick);
     }, { passive: true });
 
