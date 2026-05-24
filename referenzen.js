@@ -91,21 +91,13 @@ window.addEventListener('scroll', () => {
 
   /* ── Scroll driver ───────────────────────────────────────────────────── */
   function startScrollDriver() {
-    let targetFrac = 0;
-    let smoothFrac = 0;
-
-    window.addEventListener('scroll', () => {
+    function onScroll() {
       const maxScroll = Math.max(document.body.scrollHeight - vvh(), 1);
-      targetFrac = window.scrollY / maxScroll;
-    }, { passive: true });
-
-    function tick() {
-      smoothFrac += (targetFrac - smoothFrac) * 0.005;
-      const idx = Math.min(Math.round(smoothFrac * (TOTAL - 1)), TOTAL - 1);
+      const frac = window.scrollY / maxScroll;
+      const idx  = Math.min(Math.round(frac * (TOTAL - 1)), TOTAL - 1);
       if (idx !== lastIdx) drawFrame(idx);
-      requestAnimationFrame(tick);
     }
-    requestAnimationFrame(tick);
+    window.addEventListener('scroll', onScroll, { passive: true });
   }
 }());
 

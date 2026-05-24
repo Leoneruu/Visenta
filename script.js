@@ -162,22 +162,13 @@ window.addEventListener('scroll', () => {
 
   /* ── Scroll driver ──────────────────────────────────────────────────── */
   function startScrollDriver() {
-    let targetFrac = 0;
-    let smoothFrac = 0;
-    const LERP = 0.005;
-
-    window.addEventListener('scroll', () => {
+    function onScroll() {
       const maxScroll = Math.max(document.body.scrollHeight - vvh(), 1);
-      targetFrac = window.scrollY / maxScroll;
-    }, { passive: true });
-
-    function tick() {
-      smoothFrac += (targetFrac - smoothFrac) * LERP;
-      const idx = Math.min(Math.round(smoothFrac * (BG_TOTAL - 1)), BG_TOTAL - 1);
+      const frac = window.scrollY / maxScroll;
+      const idx  = Math.min(Math.round(frac * (BG_TOTAL - 1)), BG_TOTAL - 1);
       if (idx !== bgLastIdx) drawBg(idx);
-      requestAnimationFrame(tick);
     }
-    requestAnimationFrame(tick);
+    window.addEventListener('scroll', onScroll, { passive: true });
   }
 
 }());
