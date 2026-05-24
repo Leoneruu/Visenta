@@ -98,27 +98,14 @@ scrollEl.addEventListener('scroll', () => {
 
   /* ── Scroll driver ───────────────────────────────────────────────────── */
   function startScrollDriver() {
-    let targetFrac = 0;
-    let smoothFrac = 0;
-    let rafId = null;
-
     scrollEl.addEventListener('scroll', () => {
       const maxScroll = Math.max(scrollEl.scrollHeight - fixedHeight, 1);
-      targetFrac = scrollEl.scrollTop / maxScroll;
-      if (!rafId) rafId = requestAnimationFrame(tick);
-    }, { passive: true });
-
-    function tick() {
-      smoothFrac += (targetFrac - smoothFrac) * 0.005;
-      if (Math.abs(targetFrac - smoothFrac) * (TOTAL - 1) < 0.5) {
-        smoothFrac = targetFrac;
-        rafId = null;
-      } else {
-        rafId = requestAnimationFrame(tick);
-      }
-      const idx = Math.min(Math.round(smoothFrac * (TOTAL - 1)), TOTAL - 1);
+      const idx = Math.min(
+        Math.round((scrollEl.scrollTop / maxScroll) * (TOTAL - 1)),
+        TOTAL - 1
+      );
       if (idx !== lastIdx) drawFrame(idx);
-    }
+    }, { passive: true });
   }
 }());
 
