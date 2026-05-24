@@ -1390,7 +1390,7 @@ button { font-family: inherit; }
 }
 
 @media (max-width: 768px) {
-  .navbar { grid-template-columns: auto auto; gap: 1rem; }
+  .navbar { grid-template-columns: auto auto; gap: 1rem; justify-content: space-between; }
   .nav-menu { display: none; }
   .hamburger { display: flex; }
   .mobile-menu { display: block; }
