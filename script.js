@@ -164,7 +164,7 @@ window.addEventListener('scroll', () => {
   function startScrollDriver() {
     let targetFrac = 0;
     let smoothFrac = 0;
-    const LERP = 0.02;
+    const LERP = 0.005;
 
     window.addEventListener('scroll', () => {
       const maxScroll = Math.max(document.body.scrollHeight - vvh(), 1);
