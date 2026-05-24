@@ -16,7 +16,7 @@ window.addEventListener('scroll', () => {
      Frame index = round(pct × 60) — frame 1 at 0 %, frame 31 at 50 %,
      frame 61 at 100 %.
 
-   background_001_new.webp … background_360_new.webp  (360 frames)
+   background_001_new.webp … background_359_new.webp  (180 frames, odd numbers only)
      Preloaded in parallel.  Every settled request (success OR error) counts
      toward progress so a 404 never stalls the bar.  When all 360 are
      settled the loader fades out and the scroll driver starts.
@@ -35,7 +35,7 @@ window.addEventListener('scroll', () => {
   const pctLabel  = document.getElementById('loader-pct');
 
   /* ── Constants ──────────────────────────────────────────────────────── */
-  const BG_TOTAL  = 360;
+  const BG_TOTAL  = 180;
   const LDR_TOTAL = 61;
   const DPR       = Math.min(window.devicePixelRatio || 1, 1.5);
 
@@ -149,7 +149,7 @@ window.addEventListener('scroll', () => {
         onProgress(bgSettled / BG_TOTAL);
         if (bgSettled === BG_TOTAL) dismiss();
       };
-      img.src = `background_${pad(i + 1)}_new.webp`;
+      img.src = `background_${pad(i * 2 + 1)}_new.webp`;
       bgFrames[i] = img;
     }
   }
