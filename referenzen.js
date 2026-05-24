@@ -28,15 +28,19 @@ window.addEventListener('scroll', () => {
 
   function pad(n) { return String(n).padStart(3, '0'); }
 
+  const vvw = () => window.visualViewport?.width  ?? window.innerWidth;
+  const vvh = () => window.visualViewport?.height ?? window.innerHeight;
+
   /* ── Canvas sizing (cover) ───────────────────────────────────────────── */
   let lastIdx = 0;
 
   function resizeBg() {
-    bgCanvas.width  = Math.round(window.innerWidth  * DPR);
-    bgCanvas.height = Math.round(window.innerHeight * DPR);
+    bgCanvas.width  = Math.round(vvw() * DPR);
+    bgCanvas.height = Math.round(vvh() * DPR);
   }
   resizeBg();
   window.addEventListener('resize', () => { resizeBg(); drawFrame(lastIdx); }, { passive: true });
+  window.visualViewport?.addEventListener('resize', () => { resizeBg(); drawFrame(lastIdx); });
 
   function drawFrame(idx) {
     const img = frames[idx];
@@ -91,7 +95,7 @@ window.addEventListener('scroll', () => {
     let smoothFrac = 0;
 
     window.addEventListener('scroll', () => {
-      const maxScroll = Math.max(document.body.scrollHeight - window.innerHeight, 1);
+      const maxScroll = Math.max(document.body.scrollHeight - vvh(), 1);
       targetFrac = window.scrollY / maxScroll;
     }, { passive: true });
 

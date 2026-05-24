@@ -45,15 +45,19 @@ window.addEventListener('scroll', () => {
 
   function pad(n) { return String(n).padStart(3, '0'); }
 
+  const vvw = () => window.visualViewport?.width  ?? window.innerWidth;
+  const vvh = () => window.visualViewport?.height ?? window.innerHeight;
+
   /* ── Background canvas sizing ───────────────────────────────────────── */
   let bgLastIdx = 0;
 
   function resizeBg() {
-    bgCanvas.width  = Math.round(window.innerWidth  * DPR);
-    bgCanvas.height = Math.round(window.innerHeight * DPR);
+    bgCanvas.width  = Math.round(vvw() * DPR);
+    bgCanvas.height = Math.round(vvh() * DPR);
   }
   resizeBg();
-  window.addEventListener('resize', () => { resizeBg(); drawBg(bgLastIdx); });
+  window.addEventListener('resize', () => { resizeBg(); drawBg(bgLastIdx); }, { passive: true });
+  window.visualViewport?.addEventListener('resize', () => { resizeBg(); drawBg(bgLastIdx); });
 
   /* Cover-fit draw onto background canvas */
   function drawBg(idx) {
@@ -76,8 +80,8 @@ window.addEventListener('scroll', () => {
 
     /* Size canvas once using 1/3-of-viewport bounds (3× smaller than full) */
     if (!ldrSized) {
-      const maxW  = Math.round(window.innerWidth  * 0.15);
-      const maxH  = Math.round(window.innerHeight * 0.12);
+      const maxW  = Math.round(vvw() * 0.15);
+      const maxH  = Math.round(vvh() * 0.12);
       const scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1);
       ldrCanvas.width  = Math.round(img.naturalWidth  * scale);
       ldrCanvas.height = Math.round(img.naturalHeight * scale);
@@ -163,7 +167,7 @@ window.addEventListener('scroll', () => {
     const LERP = 0.12;
 
     window.addEventListener('scroll', () => {
-      const maxScroll = Math.max(document.body.scrollHeight - window.innerHeight, 1);
+      const maxScroll = Math.max(document.body.scrollHeight - vvh(), 1);
       targetFrac = window.scrollY / maxScroll;
     }, { passive: true });
 
