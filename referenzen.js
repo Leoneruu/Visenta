@@ -194,3 +194,38 @@ const revealObserver = new IntersectionObserver((entries) => {
   });
 }, { threshold: 0.12 });
 revealTargets.forEach(el => revealObserver.observe(el));
+
+/* ============================
+   HAMBURGER MENU
+   ============================ */
+(function initHamburger() {
+  const btn  = document.getElementById('hamburger');
+  const menu = document.getElementById('mobile-menu');
+  if (!btn || !menu) return;
+
+  function openMenu() {
+    btn.classList.add('open');
+    menu.classList.add('open');
+    btn.setAttribute('aria-expanded', 'true');
+    menu.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeMenu() {
+    btn.classList.remove('open');
+    menu.classList.remove('open');
+    btn.setAttribute('aria-expanded', 'false');
+    menu.setAttribute('aria-hidden', 'true');
+  }
+
+  btn.addEventListener('click', () => {
+    btn.classList.contains('open') ? closeMenu() : openMenu();
+  });
+
+  menu.querySelectorAll('.mobile-menu-link:not(.nav-disabled)').forEach(link => {
+    link.addEventListener('click', closeMenu);
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!btn.contains(e.target) && !menu.contains(e.target)) closeMenu();
+  });
+}());

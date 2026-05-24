@@ -38,8 +38,23 @@
       <li><a href="#" class="nav-disabled" aria-disabled="true">Über uns</a></li>
       <li><a href="#contact">Kontakt</a></li>
     </ul>
-    <button type="button" class="btn btn-nav js-open-modal">Jetzt kostenlos beraten lassen</button>
+    <div class="nav-actions">
+      <button type="button" class="btn btn-nav js-open-modal">Jetzt kostenlos beraten lassen</button>
+      <button type="button" class="hamburger" id="hamburger" aria-label="Menü öffnen" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
   </nav>
+
+  <!-- MOBILE MENU -->
+  <div class="mobile-menu" id="mobile-menu" aria-hidden="true">
+    <ul>
+      <li><a href="#leistungen" class="mobile-menu-link">Leistungen</a></li>
+      <li><a href="referenzen.html" class="mobile-menu-link">Referenzen</a></li>
+      <li><a href="#" class="mobile-menu-link nav-disabled" aria-disabled="true">Über uns</a></li>
+      <li><a href="#contact" class="mobile-menu-link">Kontakt</a></li>
+    </ul>
+  </div>
 
   <!-- HERO SECTION -->
   <section class="hero" id="hero">
