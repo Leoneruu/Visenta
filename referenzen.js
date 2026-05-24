@@ -109,7 +109,7 @@ scrollEl.addEventListener('scroll', () => {
     }, { passive: true });
 
     function tick() {
-      currentFrame += (targetFrame - currentFrame) * 0.05;
+      currentFrame += (targetFrame - currentFrame) * 0.2;
       if (Math.abs(currentFrame - targetFrame) < 0.5) {
         currentFrame = targetFrame;
         rafId = null;
