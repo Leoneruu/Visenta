@@ -3,170 +3,180 @@
 
   const canvas = document.getElementById('bg-canvas');
   if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
 
-  /* ── Preload plant frames (plant_01.png … plant_10.png) ─────────────────── */
-  const FRAME_COUNT = 9;   /* frame_002.jpg … frame_010.jpg */
-  const frames = [];
+  const gl = canvas.getContext('webgl', {
+    alpha: false, antialias: false, depth: false, stencil: false
+  });
+  if (!gl) return;
 
-  for (let i = 2; i <= 10; i++) {
-    const img = new Image();
-    img.src = 'frame_' + String(i).padStart(3, '0') + '.jpg';
-    frames.push(img);
-  }
+  /* ── Vertex shader (fullscreen triangle pair) ─────────────────────────── */
+  const VERT = `
+    attribute vec2 aPos;
+    void main() { gl_Position = vec4(aPos, 0.0, 1.0); }
+  `;
 
-  /* ── Plant lifecycle constants ───────────────────────────────────────────── */
-  const FRAME_MS   = 160;  /* ms per frame → ~1.4 s total animation             */
-  const HOLD_MS    = 2200; /* hold last frame before fading (builds trail)       */
-  const FADE_MS    = 1800; /* fade-out after hold                                */
-  const SIZE_MIN   = 180;  /* px – smallest plant                                */
-  const SIZE_MAX   = 480;  /* px – largest plant                                 */
-  const MAX_PLANTS = 80;
+  /* ── Fragment shader ──────────────────────────────────────────────────── */
+  const FRAG = `
+    precision highp float;
+    uniform float uTime;
+    uniform vec2  uRes;
 
-  /* ── Plant object ────────────────────────────────────────────────────────── */
-  function Plant(x, y) {
-    this.x          = x;
-    this.y          = y;
-    this.born       = performance.now();
-    this.size       = SIZE_MIN + Math.random() * (SIZE_MAX - SIZE_MIN);
-    this.frameIndex = 0;
-    this.opacity    = 1;
-    this.dead       = false;
-  }
+    /* ── Palette ──────────────────────────────────────────────────────────
+       #4776E6  #C44DFF  #1a6bbc  #F8BBD9  #FF8C42                        */
+    const vec3 C1 = vec3(0.2784, 0.4627, 0.9020);
+    const vec3 C2 = vec3(0.7686, 0.3020, 1.0000);
+    const vec3 C3 = vec3(0.1020, 0.4196, 0.7373);
+    const vec3 C4 = vec3(0.9725, 0.7333, 0.8510);
+    const vec3 C5 = vec3(1.0000, 0.5490, 0.2588);
 
-  Plant.prototype.update = function (now) {
-    const elapsed = now - this.born;
-    const animDur = FRAME_MS * FRAME_COUNT;
-    const holdEnd = animDur + HOLD_MS;
+    /* ── Knobs ────────────────────────────────────────────────────────── */
+    const float WAVE_STR    = 0.25;
+    const float WAVE_FREQ   = 1.6;
+    const float WAVE_ANG    = 78.0;   /* degrees                          */
+    const float LIQ_INT     = 10.0;
+    const float LIQ_STIFF   = 15.0;
+    const float GRAIN_AMT   = 0.4;
+    const float COLOR_BLEND = 2.0;
+    const float PI          = 3.14159265358979;
 
-    if (elapsed < animDur) {
-      /* Playing through frames */
-      this.frameIndex = Math.min(Math.floor(elapsed / FRAME_MS), FRAME_COUNT - 1);
-      this.opacity    = 1;
-    } else if (elapsed < holdEnd) {
-      /* Holding last frame – builds up the trail */
-      this.frameIndex = FRAME_COUNT - 1;
-      this.opacity    = 1;
-    } else {
-      /* Fading out */
-      this.frameIndex = FRAME_COUNT - 1;
-      this.opacity    = Math.max(0, 1 - (elapsed - holdEnd) / FADE_MS);
-      if (this.opacity <= 0) this.dead = true;
+    /* ── Value noise ──────────────────────────────────────────────────── */
+    float hash(vec2 p) {
+      p = fract(p * vec2(127.1, 311.7));
+      p += dot(p, p + 19.19);
+      return fract(p.x * p.y);
     }
-  };
 
-  Plant.prototype.draw = function (ctx) {
-    /* Fall back to nearest previous frame if this one is missing */
-    let img = frames[this.frameIndex];
-    if (!img || !img.complete || !img.naturalWidth) {
-      for (let d = 1; d <= this.frameIndex; d++) {
-        const fb = frames[this.frameIndex - d];
-        if (fb && fb.complete && fb.naturalWidth) { img = fb; break; }
+    float vnoise(vec2 p) {
+      vec2 i = floor(p), f = fract(p);
+      f = f * f * (3.0 - 2.0 * f);
+      return mix(
+        mix(hash(i),              hash(i + vec2(1.0, 0.0)), f.x),
+        mix(hash(i + vec2(0.0,1.0)), hash(i + vec2(1.0,1.0)), f.x),
+        f.y
+      );
+    }
+
+    /* 4-octave fBm ── fast enough for mobile ────────────────────────── */
+    float fbm(vec2 p) {
+      float v = 0.0, a = 0.5;
+      for (int i = 0; i < 4; i++) {
+        v += a * vnoise(p);
+        p  = p * 2.1 + vec2(1.7, 9.2);
+        a *= 0.5;
       }
+      return v;
     }
-    if (!img || !img.complete || !img.naturalWidth) return;
-    const s = this.size;
-    ctx.globalAlpha              = this.opacity;
-    ctx.globalCompositeOperation = 'screen';
-    ctx.drawImage(img, this.x - s / 2, this.y - s / 2, s, s);
-  };
 
-  /* ── Active plant pool ───────────────────────────────────────────────────── */
-  const plants = [];
+    void main() {
+      vec2  uv = gl_FragCoord.xy / uRes;
+      float T  = uTime * 0.11;          /* slow overall drift              */
 
-  function spawn(x, y) {
-    if (plants.length >= MAX_PLANTS) plants.shift(); /* evict oldest             */
-    plants.push(new Plant(x, y));
+      /* ── Wave distortion ─────────────────────────────────────────────
+         Angle 78°, frequency 1.6, strength 0.25
+         Displaces UVs perpendicular to the wave direction.             */
+      float wAng = WAVE_ANG * PI / 180.0;
+      vec2  wDir = vec2(cos(wAng), sin(wAng));
+      float wv   = sin(dot(uv, wDir) * WAVE_FREQ * 2.0 * PI + T * 1.6)
+                   * WAVE_STR * 0.11;
+      vec2  wuv  = uv + wv * vec2(-wDir.y, wDir.x);
+
+      /* ── Liquify (fBm displacement) ──────────────────────────────────
+         Intensity 10 / Stiffness 15 → ratio ≈ 0.667
+         Stiffness maps to noise frequency; intensity drives amplitude. */
+      float liqFreq = LIQ_STIFF * 0.13;
+      float liqAmt  = (LIQ_INT / LIQ_STIFF) * 0.06;
+      vec2  liq = vec2(
+        fbm(wuv * liqFreq + vec2(T * 0.38, T * 0.22)),
+        fbm(wuv * liqFreq + vec2(T * 0.22, T * 0.38) + 4.73)
+      ) * 2.0 - 1.0;
+      vec2 fuv = wuv + liq * liqAmt;
+
+      /* ── 5 colour blobs, each orbiting at its own radius + phase ─────
+         COLOR_BLEND = 2.0 controls falloff sharpness (higher = tighter
+         blobs, sharper colour transitions).                            */
+      vec2 q1 = vec2(0.50 + 0.40*sin(T*0.68),         0.50 + 0.30*cos(T*0.52));
+      vec2 q2 = vec2(0.50 + 0.32*cos(T*0.54 + 1.10),  0.50 + 0.38*sin(T*0.76 + 2.00));
+      vec2 q3 = vec2(0.50 + 0.28*sin(T*0.83 + 3.00),  0.50 + 0.36*cos(T*0.59 + 1.50));
+      vec2 q4 = vec2(0.50 + 0.44*cos(T*0.48 + 2.50),  0.50 + 0.26*sin(T*0.67 + 0.50));
+      vec2 q5 = vec2(0.50 + 0.26*sin(T*0.77 + 1.50),  0.50 + 0.44*cos(T*0.86 + 3.50));
+
+      /* Slightly varied falloff per blob for organic feel */
+      float k  = COLOR_BLEND * 4.2;
+      float w1 = exp(-distance(fuv, q1) * k * 0.90);
+      float w2 = exp(-distance(fuv, q2) * k * 1.05);
+      float w3 = exp(-distance(fuv, q3) * k * 0.85);
+      float w4 = exp(-distance(fuv, q4) * k * 1.10);
+      float w5 = exp(-distance(fuv, q5) * k * 0.95);
+      float wT = w1 + w2 + w3 + w4 + w5 + 1e-5;
+
+      vec3 col = (C1*w1 + C2*w2 + C3*w3 + C4*w4 + C5*w5) / wT;
+
+      /* ── Film grain ──────────────────────────────────────────────────
+         GRAIN_AMT 0.4 → ~4 % noise amplitude after 0.1 scale factor.  */
+      float grain = hash(gl_FragCoord.xy + fract(T * 173.4)) * 2.0 - 1.0;
+      col += grain * GRAIN_AMT * 0.04;
+
+      gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+    }
+  `;
+
+  /* ── Compile & link ───────────────────────────────────────────────────── */
+  function compileShader(type, src) {
+    const sh = gl.createShader(type);
+    gl.shaderSource(sh, src);
+    gl.compileShader(sh);
+    return sh;
   }
 
-  /* ── Pointer / touch tracking ────────────────────────────────────────────── */
-  let lastX = -1, lastY = -1, lastSpawn = 0;
+  const prog = gl.createProgram();
+  gl.attachShader(prog, compileShader(gl.VERTEX_SHADER,   VERT));
+  gl.attachShader(prog, compileShader(gl.FRAGMENT_SHADER, FRAG));
+  gl.linkProgram(prog);
+  gl.useProgram(prog);
 
-  function onMove(cx, cy) {
-    const now = performance.now();
+  /* ── Fullscreen quad (2 triangles) ───────────────────────────────────── */
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+    -1, -1,   1, -1,   -1, 1,
+     1, -1,   1,  1,   -1, 1
+  ]), gl.STATIC_DRAW);
 
-    /* Velocity-based spawn interval: fast mouse → shorter gap → more plants   */
-    let interval = 60;
-    if (lastX >= 0) {
-      const dx  = cx - lastX;
-      const dy  = cy - lastY;
-      const vel = Math.sqrt(dx * dx + dy * dy); /* px per event                 */
-      interval  = Math.max(12, 60 - vel * 1.8);
-    }
+  const aPos = gl.getAttribLocation(prog, 'aPos');
+  gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
 
-    if (now - lastSpawn >= interval) {
-      spawn(cx, cy);
-      lastSpawn = now;
-    }
+  const uTime = gl.getUniformLocation(prog, 'uTime');
+  const uRes  = gl.getUniformLocation(prog, 'uRes');
 
-    lastX = cx;
-    lastY = cy;
-  }
-
-  window.addEventListener('mousemove', function (e) {
-    onMove(e.clientX, e.clientY);
-  }, { passive: true });
-
-  window.addEventListener('touchmove', function (e) {
-    var t = e.touches[0];
-    onMove(t.clientX, t.clientY);
-  }, { passive: true });
-
-  window.addEventListener('touchstart', function (e) {
-    var t = e.touches[0];
-    lastX = t.clientX;
-    lastY = t.clientY;
-    spawn(t.clientX, t.clientY);
-    lastSpawn = performance.now();
-  }, { passive: true });
-
-  /* ── Canvas sizing (width-only resize, fixed height) ─────────────────────── */
+  /* ── Canvas sizing (width-only resize) ───────────────────────────────── */
   const DPR    = Math.min(window.devicePixelRatio || 1, 1.5);
   const fixedH = window.innerHeight;
   let   lastW  = window.innerWidth;
-  let   curW   = lastW;
 
   function resize() {
-    curW          = window.innerWidth;
-    canvas.width  = Math.round(curW   * DPR);
-    canvas.height = Math.round(fixedH * DPR);
+    const w = Math.round(window.innerWidth * DPR);
+    const h = Math.round(fixedH * DPR);
+    canvas.width  = w;
+    canvas.height = h;
+    gl.viewport(0, 0, w, h);
   }
   resize();
 
   window.addEventListener('resize', function () {
-    var nw = window.innerWidth;
+    const nw = window.innerWidth;
     if (nw !== lastW) { lastW = nw; resize(); }
   }, { passive: true });
 
-  /* ── Render loop ─────────────────────────────────────────────────────────── */
-  function loop(now) {
+  /* ── RAF loop ─────────────────────────────────────────────────────────── */
+  let t0 = null;
+  function loop(ts) {
     requestAnimationFrame(loop);
-
-    /* Scale context so all coordinates are in logical CSS pixels */
-    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-
-    /* Background fill */
-    ctx.globalAlpha              = 1;
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle                = '#080808';
-    ctx.fillRect(0, 0, curW, fixedH);
-
-    /* Draw plants back-to-front; dead ones removed in-place */
-    for (var i = plants.length - 1; i >= 0; i--) {
-      plants[i].update(now);
-      if (plants[i].dead) {
-        plants.splice(i, 1);
-      } else {
-        plants[i].draw(ctx);
-      }
-    }
-
-    /* Restore context state for anything that might read it afterwards */
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.globalAlpha              = 1;
-    ctx.globalCompositeOperation = 'source-over';
+    if (!t0) t0 = ts;
+    gl.uniform1f(uTime, (ts - t0) * 0.001);
+    gl.uniform2f(uRes,  canvas.width, canvas.height);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
-
   requestAnimationFrame(loop);
+
 }());
