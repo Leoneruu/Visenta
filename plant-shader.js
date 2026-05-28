@@ -7,12 +7,12 @@
   if (!ctx) return;
 
   /* ── Preload plant frames (plant_01.png … plant_10.png) ─────────────────── */
-  const FRAME_COUNT = 10;
+  const FRAME_COUNT = 9;   /* frame_002.jpg … frame_010.jpg */
   const frames = [];
 
-  for (let i = 1; i <= FRAME_COUNT; i++) {
+  for (let i = 2; i <= 10; i++) {
     const img = new Image();
-    img.src = 'plant_' + String(i).padStart(2, '0') + '.png';
+    img.src = 'frame_' + String(i).padStart(3, '0') + '.jpg';
     frames.push(img);
   }
 
