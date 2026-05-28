@@ -17,9 +17,9 @@
   }
 
   /* ── Plant lifecycle constants ───────────────────────────────────────────── */
-  const FRAME_MS   = 50;   /* ms per frame → 500 ms total animation            */
-  const FADE_MS    = 700;  /* fade-out duration after last frame                */
-  const MAX_PLANTS = 40;   /* hard cap – oldest plant evicted when exceeded     */
+  const FRAME_MS   = 80;   /* ms per frame → 720 ms total animation            */
+  const FADE_MS    = 900;  /* fade-out duration after last frame                */
+  const MAX_PLANTS = 60;   /* hard cap – oldest plant evicted when exceeded     */
 
   /* ── Plant object ────────────────────────────────────────────────────────── */
   function Plant(x, y) {
@@ -47,7 +47,14 @@
   const DISP = 350;
 
   Plant.prototype.draw = function (ctx) {
-    const img = frames[this.frameIndex];
+    /* Fall back to nearest previous frame if this one is missing (404 / not yet loaded) */
+    let img = frames[this.frameIndex];
+    if (!img || !img.complete || !img.naturalWidth) {
+      for (let d = 1; d <= this.frameIndex; d++) {
+        const fb = frames[this.frameIndex - d];
+        if (fb && fb.complete && fb.naturalWidth) { img = fb; break; }
+      }
+    }
     if (!img || !img.complete || !img.naturalWidth) return;
     ctx.globalAlpha              = this.opacity;
     ctx.globalCompositeOperation = 'screen'; /* black = transparent            */
@@ -70,12 +77,12 @@
     const now = performance.now();
 
     /* Velocity-based spawn interval: fast mouse → shorter gap → more plants   */
-    let interval = 160;
+    let interval = 60;
     if (lastX >= 0) {
       const dx  = cx - lastX;
       const dy  = cy - lastY;
       const vel = Math.sqrt(dx * dx + dy * dy); /* px per event                 */
-      interval  = Math.max(35, 160 - vel * 2.2);
+      interval  = Math.max(12, 60 - vel * 1.8);
     }
 
     if (now - lastSpawn >= interval) {
