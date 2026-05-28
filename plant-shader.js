@@ -17,15 +17,19 @@
   }
 
   /* ── Plant lifecycle constants ───────────────────────────────────────────── */
-  const FRAME_MS   = 80;   /* ms per frame → 720 ms total animation            */
-  const FADE_MS    = 900;  /* fade-out duration after last frame                */
-  const MAX_PLANTS = 60;   /* hard cap – oldest plant evicted when exceeded     */
+  const FRAME_MS   = 160;  /* ms per frame → ~1.4 s total animation             */
+  const HOLD_MS    = 2200; /* hold last frame before fading (builds trail)       */
+  const FADE_MS    = 1800; /* fade-out after hold                                */
+  const SIZE_MIN   = 180;  /* px – smallest plant                                */
+  const SIZE_MAX   = 480;  /* px – largest plant                                 */
+  const MAX_PLANTS = 80;
 
   /* ── Plant object ────────────────────────────────────────────────────────── */
   function Plant(x, y) {
     this.x          = x;
     this.y          = y;
     this.born       = performance.now();
+    this.size       = SIZE_MIN + Math.random() * (SIZE_MAX - SIZE_MIN);
     this.frameIndex = 0;
     this.opacity    = 1;
     this.dead       = false;
@@ -34,20 +38,26 @@
   Plant.prototype.update = function (now) {
     const elapsed = now - this.born;
     const animDur = FRAME_MS * FRAME_COUNT;
-    this.frameIndex = Math.min(Math.floor(elapsed / FRAME_MS), FRAME_COUNT - 1);
+    const holdEnd = animDur + HOLD_MS;
+
     if (elapsed < animDur) {
-      this.opacity = 1;
+      /* Playing through frames */
+      this.frameIndex = Math.min(Math.floor(elapsed / FRAME_MS), FRAME_COUNT - 1);
+      this.opacity    = 1;
+    } else if (elapsed < holdEnd) {
+      /* Holding last frame – builds up the trail */
+      this.frameIndex = FRAME_COUNT - 1;
+      this.opacity    = 1;
     } else {
-      this.opacity = Math.max(0, 1 - (elapsed - animDur) / FADE_MS);
+      /* Fading out */
+      this.frameIndex = FRAME_COUNT - 1;
+      this.opacity    = Math.max(0, 1 - (elapsed - holdEnd) / FADE_MS);
       if (this.opacity <= 0) this.dead = true;
     }
   };
 
-  /* Display size: draw at 350 CSS px (natural 960px is too large for cursor) */
-  const DISP = 350;
-
   Plant.prototype.draw = function (ctx) {
-    /* Fall back to nearest previous frame if this one is missing (404 / not yet loaded) */
+    /* Fall back to nearest previous frame if this one is missing */
     let img = frames[this.frameIndex];
     if (!img || !img.complete || !img.naturalWidth) {
       for (let d = 1; d <= this.frameIndex; d++) {
@@ -56,10 +66,10 @@
       }
     }
     if (!img || !img.complete || !img.naturalWidth) return;
+    const s = this.size;
     ctx.globalAlpha              = this.opacity;
-    ctx.globalCompositeOperation = 'screen'; /* black = transparent            */
-    /* Center image on spawn position */
-    ctx.drawImage(img, this.x - DISP / 2, this.y - DISP / 2, DISP, DISP);
+    ctx.globalCompositeOperation = 'screen';
+    ctx.drawImage(img, this.x - s / 2, this.y - s / 2, s, s);
   };
 
   /* ── Active plant pool ───────────────────────────────────────────────────── */
