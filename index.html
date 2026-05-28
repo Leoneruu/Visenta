@@ -12,16 +12,7 @@
 </head>
 <body>
 
-  <!-- LOADING SCREEN – loader animation + progress bar while bg frames preload -->
-  <div id="loading-screen" aria-hidden="true">
-    <canvas id="loader-canvas"></canvas>
-    <div class="loader-bar-wrap">
-      <div class="loader-bar-fill" id="loader-bar-fill"></div>
-    </div>
-    <p class="loader-pct" id="loader-pct">0%</p>
-  </div>
-
-  <!-- GLOBAL FIXED BACKGROUND CANVAS (frame sequence) -->
+  <!-- GLOBAL FIXED BACKGROUND CANVAS (WebGL plant shader) -->
   <div class="bg-video-wrapper">
     <canvas id="bg-canvas"></canvas>
     <div class="bg-video-overlay"></div>
@@ -444,6 +435,7 @@
     </div>
   </div>
 
+  <script src="plant-shader.js"></script>
   <script src="script.js?v=4"></script>
 </body>
 </html>

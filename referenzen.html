@@ -10,46 +10,6 @@
   <link rel="icon" href="Neues Logo.png" type="image/png" />
   <link rel="stylesheet" href="style.css?v=2" />
   <style>
-    /* ── Referenzen-page loading screen (bar + pct only, no canvas) ── */
-    #loading-screen {
-      position: fixed;
-      inset: 0;
-      z-index: 9999;
-      background: #000;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      opacity: 1;
-      transition: opacity 0.6s ease;
-    }
-    #loading-screen.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
-    .ref-bar-wrap {
-      width: 280px;
-      height: 2px;
-      background: rgba(255,255,255,0.15);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-    .ref-bar-fill {
-      height: 100%;
-      width: 0%;
-      background: #fff;
-      border-radius: 2px;
-      transition: width 0.1s linear;
-    }
-    .ref-pct {
-      font-family: 'Outfit', sans-serif;
-      font-size: 0.9rem;
-      font-weight: 400;
-      letter-spacing: 0.08em;
-      color: rgba(255,255,255,0.7);
-    }
-
     /* ── Project grid: 3-col, wider cards ── */
     .projects-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -79,15 +39,7 @@
 </head>
 <body>
 
-  <!-- LOADING SCREEN -->
-  <div id="loading-screen" aria-hidden="true">
-    <div class="ref-bar-wrap">
-      <div class="ref-bar-fill" id="ref-bar-fill"></div>
-    </div>
-    <p class="ref-pct" id="ref-pct">0%</p>
-  </div>
-
-  <!-- GLOBAL FIXED BACKGROUND CANVAS (frame sequence) -->
+  <!-- GLOBAL FIXED BACKGROUND CANVAS (WebGL plant shader) -->
   <div class="bg-video-wrapper">
     <canvas id="bg-canvas"></canvas>
     <div class="bg-video-overlay"></div>
@@ -270,6 +222,7 @@
 
   </div><!-- /#scroll-container -->
 
+  <script src="plant-shader.js"></script>
   <script src="referenzen.js"></script>
 </body>
 </html>
