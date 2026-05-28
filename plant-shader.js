@@ -43,15 +43,16 @@
     }
   };
 
+  /* Display size: draw at 350 CSS px (natural 960px is too large for cursor) */
+  const DISP = 350;
+
   Plant.prototype.draw = function (ctx) {
     const img = frames[this.frameIndex];
     if (!img || !img.complete || !img.naturalWidth) return;
-    const w = img.naturalWidth;
-    const h = img.naturalHeight;
     ctx.globalAlpha              = this.opacity;
     ctx.globalCompositeOperation = 'screen'; /* black = transparent            */
-    /* Anchor bottom-center of image to spawn position so plant grows upward   */
-    ctx.drawImage(img, this.x - w / 2, this.y - h, w, h);
+    /* Center image on spawn position */
+    ctx.drawImage(img, this.x - DISP / 2, this.y - DISP / 2, DISP, DISP);
   };
 
   /* ── Active plant pool ───────────────────────────────────────────────────── */
